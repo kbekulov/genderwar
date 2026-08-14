@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { IconMan, IconWoman } from "@tabler/icons-react";
+import { IconMan, IconMap2, IconWoman } from "@tabler/icons-react";
 import { prologueSlides as slides, type Gender } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience";
@@ -26,12 +26,44 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
+const mapStages: Array<{ screen: Screen; label: string; detail: string }> = [
+  { screen: "menu", label: "Origin", detail: "Begin the journey" },
+  { screen: "intro", label: "The signals", detail: "Five changes in society" },
+  { screen: "choose", label: "Perspective", detail: "Choose whose path to follow" },
+  { screen: "experience", label: "Experience", detail: "Enter the first chapter" },
+];
+
+function JourneyMap({ side, screen, selectedGender, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; onNavigate: (screen: Screen) => void }) {
+  const progress = mapStages.findIndex((stage) => stage.screen === screen);
+  return (
+    <section className={`journey-map ${side}`} aria-label={`${side} journey map`}>
+      <header><Character gender={side} /><span><small>{side} map</small><strong>The {side} path</strong></span></header>
+      <ol>
+        {mapStages.map((stage, index) => {
+          const pathMismatch = stage.screen === "experience" && selectedGender !== side;
+          const locked = index > progress || pathMismatch;
+          const current = stage.screen === screen && (!pathMismatch || screen !== "experience");
+          return (
+            <li key={stage.screen} className={`${current ? "current" : ""} ${index < progress && !pathMismatch ? "done" : ""} ${locked ? "locked" : ""}`}>
+              <button disabled={locked} onClick={() => onNavigate(stage.screen)}>
+                <span className="map-node">{index < progress && !pathMismatch ? "✓" : index + 1}</span>
+                <span className="map-stage-copy"><strong>{stage.label}</strong><small>{locked && pathMismatch ? `Choose ${side} to unlock` : stage.detail}</small></span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [slideIndex, setSlideIndex] = useState(0);
   const [gender, setGender] = useState<Gender | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [floodTone, setFloodTone] = useState<"male" | "female" | "neutral" | null>(null);
@@ -54,8 +86,8 @@ export default function Home() {
 
   function toneForSlide(index: number): "male" | "female" | "neutral" {
     const id = slides[index]?.id;
-    if (id === "retreat" || id === "crime") return "male";
-    if (id === "depression" || id === "fertility") return "female";
+    if (id === "retreat") return "male";
+    if (id === "depression") return "female";
     return "neutral";
   }
 
@@ -66,11 +98,11 @@ export default function Home() {
     window.setTimeout(() => {
       if (index === "choose") setScreen("choose");
       else setSlideIndex(index);
-    }, reducedMotion ? 0 : 330);
+    }, reducedMotion ? 0 : 520);
     window.setTimeout(() => {
       setFloodTone(null);
       transitionLocked.current = false;
-    }, reducedMotion ? 30 : 680);
+    }, reducedMotion ? 30 : 1040);
   }
 
   function advanceSlide() {
@@ -90,12 +122,19 @@ export default function Home() {
   function returnToMenu() {
     setSettingsOpen(false);
     setRecapOpen(false);
+    setMapOpen(false);
     setScreen("menu");
+  }
+
+  function navigateFromMap(nextScreen: Screen) {
+    setMapOpen(false);
+    setScreen(nextScreen);
   }
 
   return (
     <main className={`game-shell ${reducedMotion ? "reduce-motion" : ""}`}>
       <div className="noise" />
+      <button className="map-dock" onClick={() => setMapOpen(true)} aria-label="Open journey map"><IconMap2 stroke={2.4} /><span>Map</span></button>
 
       {screen === "menu" && (
         <section className="menu-screen screen-enter" aria-label="Gender War main menu">
@@ -123,6 +162,9 @@ export default function Home() {
               </button>
               <button className="menu-action" onClick={() => setRecapOpen(true)}>
                 <span className="menu-index">03</span><strong>Recap</strong><i>↺</i>
+              </button>
+              <button className="menu-action" onClick={() => setMapOpen(true)}>
+                <span className="menu-index">04</span><strong>Map</strong><i>⌖</i>
               </button>
             </nav>
           </div>
@@ -172,7 +214,7 @@ export default function Home() {
             <strong>{slideIndex === slides.length - 1 ? "Tap to choose your character" : "Tap or swipe to continue"}</strong>
             <i>→</i>
           </div>
-          {floodTone && <div className={`story-flood ${floodTone}`} aria-hidden="true" />}
+          {floodTone && <div className={`story-flood ${floodTone}`} aria-hidden="true"><span /><span /><span /></div>}
         </section>
       )}
 
@@ -230,11 +272,19 @@ export default function Home() {
         </section>
       )}
 
-      {(settingsOpen || recapOpen) && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => { setSettingsOpen(false); setRecapOpen(false); }}>
-          <section className="game-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); }} aria-label="Close">×</button>
-            {settingsOpen ? (
+      {(settingsOpen || recapOpen || mapOpen) && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); }}>
+          <section className={`game-modal ${mapOpen ? "map-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); }} aria-label="Close">×</button>
+            {mapOpen ? (
+              <>
+                <span className="modal-kicker">Your journey</span><h2 id="modal-title">Map</h2>
+                <div className="dual-map">
+                  <JourneyMap side="female" screen={screen} selectedGender={gender} onNavigate={navigateFromMap} />
+                  <JourneyMap side="male" screen={screen} selectedGender={gender} onNavigate={navigateFromMap} />
+                </div>
+              </>
+            ) : settingsOpen ? (
               <>
                 <span className="modal-kicker">System</span><h2 id="modal-title">Settings</h2>
                 <label className="setting-row"><span><strong>Auto-advance</strong><small>Move through prologue slides every 3.5 seconds</small></span><input type="checkbox" checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} /></label>
