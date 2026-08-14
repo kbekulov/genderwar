@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { IconMan, IconMap2, IconWoman } from "@tabler/icons-react";
+import { IconBuildingBank, IconHeartHandshake, IconMan, IconMap2, IconTrendingUp, IconWoman } from "@tabler/icons-react";
 import {
   Background,
   BackgroundVariant,
@@ -12,9 +12,9 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { prologueSlides as slides, terminology, type Gender } from "@/app/content/story";
+import { experienceSections, prologueSlides as slides, terminology, type ExperienceSectionId, type Gender } from "@/app/content/story";
 
-type Screen = "menu" | "intro" | "choose" | "experience";
+type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
   const Icon = gender === "male" ? IconMan : IconWoman;
   return (
@@ -40,8 +40,15 @@ const mapStages: Array<{ screen: Screen; label: string; detail: string }> = [
   { screen: "menu", label: "Origin", detail: "Begin the journey" },
   { screen: "intro", label: "The signals", detail: "Five changes in society" },
   { screen: "choose", label: "Perspective", detail: "Choose whose path to follow" },
-  { screen: "experience", label: "Experience", detail: "Enter the first chapter" },
+  { screen: "experience", label: "Experience", detail: "Three lenses on the path" },
+  ...experienceSections.map((section) => ({ screen: section.id, label: section.mapLabel, detail: section.eyebrow })),
 ];
+
+const sectionIcons = {
+  selection: IconHeartHandshake,
+  politics: IconBuildingBank,
+  value: IconTrendingUp,
+};
 
 type JourneyNodeData = {
   stage: (typeof mapStages)[number];
@@ -73,24 +80,28 @@ function JourneyStageNode({ data }: NodeProps<JourneyNode>) {
 
 const journeyNodeTypes = { journey: JourneyStageNode };
 
-function JourneyMap({ side, screen, selectedGender, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; onNavigate: (screen: Screen) => void }) {
+function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; visitedSections: ExperienceSectionId[]; onNavigate: (screen: Screen) => void }) {
   const progress = mapStages.findIndex((stage) => stage.screen === screen);
   const mirrored = side === "male";
   const nodes: JourneyNode[] = mapStages.map((stage, index) => {
-    const pathMismatch = stage.screen === "experience" && selectedGender !== null && selectedGender !== side;
-    const locked = index > progress || pathMismatch;
+    const isExperienceStage = index >= 3;
+    const pathMismatch = isExperienceStage && selectedGender !== null && selectedGender !== side;
+    const waitingForChoice = isExperienceStage && selectedGender === null;
+    const onboardingLocked = progress < 3 && index > progress;
+    const locked = pathMismatch || waitingForChoice || onboardingLocked;
     const current = stage.screen === screen && !pathMismatch;
+    const sectionVisited = index >= 4 && visitedSections.includes(stage.screen as ExperienceSectionId);
     const goesRight = (index % 2 === 0) !== mirrored;
     return {
       id: `${side}-${stage.screen}`,
       type: "journey",
-      position: { x: goesRight ? 92 : 0, y: 348 - index * 112 },
+      position: { x: goesRight ? 92 : 0, y: 516 - index * 84 },
       data: {
         stage,
         index,
         locked,
         current,
-        done: index < progress && !pathMismatch,
+        done: !pathMismatch && (index < Math.min(progress, 4) || sectionVisited),
         mismatch: pathMismatch,
         onNavigate,
       },
@@ -100,14 +111,14 @@ function JourneyMap({ side, screen, selectedGender, onNavigate }: { side: Gender
   });
   const edges: Edge[] = mapStages.slice(0, -1).map((stage, index) => {
     const next = mapStages[index + 1];
-    const reached = index < progress;
+    const targetVisited = index + 1 < Math.min(progress + 1, 4) || (index + 1 >= 4 && visitedSections.includes(next.screen as ExperienceSectionId));
     return {
       id: `${side}-${stage.screen}-${next.screen}`,
       source: `${side}-${stage.screen}`,
       target: `${side}-${next.screen}`,
       type: "bezier",
-      animated: reached && index === progress - 1,
-      className: reached ? "path-edge reached" : "path-edge",
+      animated: targetVisited && next.screen === screen,
+      className: targetVisited ? "path-edge reached" : "path-edge",
     };
   });
 
@@ -144,6 +155,7 @@ export default function Home() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [slideIndex, setSlideIndex] = useState(0);
   const [gender, setGender] = useState<Gender | null>(null);
+  const [visitedSections, setVisitedSections] = useState<ExperienceSectionId[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -165,6 +177,7 @@ export default function Home() {
   function startGame() {
     setSlideIndex(0);
     setGender(null);
+    setVisitedSections([]);
     setScreen("intro");
   }
 
@@ -213,8 +226,23 @@ export default function Home() {
 
   function navigateFromMap(nextScreen: Screen) {
     setMapOpen(false);
+    if (nextScreen === "selection" || nextScreen === "politics" || nextScreen === "value") {
+      setVisitedSections((visited) => visited.includes(nextScreen) ? visited : [...visited, nextScreen]);
+    }
     setScreen(nextScreen);
   }
+
+  function chooseGender(nextGender: Gender) {
+    if (gender !== nextGender) setVisitedSections([]);
+    setGender(nextGender);
+  }
+
+  function enterSection(section: ExperienceSectionId) {
+    setVisitedSections((visited) => visited.includes(section) ? visited : [...visited, section]);
+    setScreen(section);
+  }
+
+  const activeSection = experienceSections.find((section) => section.id === screen);
 
   return (
     <main className={`game-shell ${reducedMotion ? "reduce-motion" : ""}`}>
@@ -321,14 +349,14 @@ export default function Home() {
           </div>
 
           <div className="character-select" role="radiogroup" aria-label="Choose a character">
-            <button className={`select-card male ${gender === "male" ? "selected" : ""}`} onClick={() => setGender("male")} role="radio" aria-checked={gender === "male"}>
+            <button className={`select-card male ${gender === "male" ? "selected" : ""}`} onClick={() => chooseGender("male")} role="radio" aria-checked={gender === "male"}>
               <span className="card-code">M · 01</span>
               <Character gender="male" large />
               <span className="card-copy"><small>Play as</small><strong>Male</strong><i>the male experience</i></span>
               <span className="select-mark">{gender === "male" ? "✓" : "+"}</span>
             </button>
             <div className="versus"><span />or<span /></div>
-            <button className={`select-card female ${gender === "female" ? "selected" : ""}`} onClick={() => setGender("female")} role="radio" aria-checked={gender === "female"}>
+            <button className={`select-card female ${gender === "female" ? "selected" : ""}`} onClick={() => chooseGender("female")} role="radio" aria-checked={gender === "female"}>
               <span className="card-code">F · 02</span>
               <Character gender="female" large />
               <span className="card-copy"><small>Play as</small><strong>Female</strong><i>the female experience</i></span>
@@ -343,7 +371,7 @@ export default function Home() {
       )}
 
       {screen === "experience" && gender && (
-        <section className={`experience-screen ${gender} screen-enter`}>
+        <section className={`experience-screen chapter-hub ${gender} screen-enter`}>
           <header className="story-header">
             <button className="text-button" onClick={() => setScreen("choose")}>← Character select</button>
             <Brand compact />
@@ -351,12 +379,53 @@ export default function Home() {
           </header>
           <div className="experience-orbit" aria-hidden="true"><span /><span /><span /></div>
           <div className="experience-character"><Character gender={gender} large /></div>
-          <div className="experience-copy">
-            <span>Chapter one</span>
+          <div className="experience-copy experience-hub">
+            <span>Your three lenses</span>
             <h2>The <em>{gender}</em><br />experience</h2>
-            <p>Your path is chosen. The first scenario for this perspective is coming next.</p>
-            <button disabled><span>Continue soon</span><i>···</i></button>
+            <p>Explore the same three forces from this perspective. Each chapter will grow as new findings and evidence are added.</p>
+            <div className="chapter-grid">
+              {experienceSections.map((section) => {
+                const Icon = sectionIcons[section.id];
+                return (
+                  <button key={section.id} className="chapter-card" onClick={() => enterSection(section.id)}>
+                    <span className="chapter-icon"><Icon stroke={2.25} /></span>
+                    <small>{section.number} · {section.eyebrow}</small>
+                    <strong>{section.title}</strong>
+                    <i>→</i>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+        </section>
+      )}
+
+      {activeSection && gender && (
+        <section className={`chapter-screen ${gender} screen-enter`}>
+          <header className="story-header">
+            <button className="text-button" onClick={() => setScreen("experience")}>← Experience</button>
+            <Brand compact />
+            <button className="text-button" onClick={returnToMenu}>Main menu</button>
+          </header>
+          <div className="chapter-number" aria-hidden="true">{activeSection.number}</div>
+          <article className="chapter-content">
+            <span className="chapter-eyebrow">{activeSection.eyebrow}</span>
+            <h2>{activeSection.title}</h2>
+            <p className="chapter-description">{activeSection.description}</p>
+            <blockquote>{activeSection.prompt[gender]}</blockquote>
+            <div className="chapter-lenses" aria-label="Topics in this chapter">
+              {activeSection.lenses.map((lens, index) => <span key={lens}><b>{String(index + 1).padStart(2, "0")}</b>{lens}</span>)}
+            </div>
+            <footer>
+              <span>Framework ready</span>
+              <p>Interactive scenarios and evidence will live inside this chapter.</p>
+              {experienceSections.findIndex((section) => section.id === activeSection.id) < experienceSections.length - 1 ? (
+                <button onClick={() => enterSection(experienceSections[experienceSections.findIndex((section) => section.id === activeSection.id) + 1].id)}>Next chapter <i>→</i></button>
+              ) : (
+                <button onClick={() => setScreen("experience")}>All chapters <i>↺</i></button>
+              )}
+            </footer>
+          </article>
         </section>
       )}
 
@@ -380,8 +449,8 @@ export default function Home() {
               <>
                 <span className="modal-kicker">Your journey</span><h2 id="modal-title">Map</h2>
                 <div className="dual-map">
-                  <JourneyMap side="female" screen={screen} selectedGender={gender} onNavigate={navigateFromMap} />
-                  <JourneyMap side="male" screen={screen} selectedGender={gender} onNavigate={navigateFromMap} />
+                  <JourneyMap side="female" screen={screen} selectedGender={gender} visitedSections={visitedSections} onNavigate={navigateFromMap} />
+                  <JourneyMap side="male" screen={screen} selectedGender={gender} visitedSections={visitedSections} onNavigate={navigateFromMap} />
                 </div>
               </>
             ) : settingsOpen ? (

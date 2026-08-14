@@ -1,5 +1,18 @@
 export type Gender = "male" | "female";
 
+export type ExperienceSectionId = "selection" | "politics" | "value";
+
+export type ExperienceSection = {
+  id: ExperienceSectionId;
+  number: string;
+  mapLabel: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  lenses: string[];
+  prompt: Record<Gender, string>;
+};
+
 export type PrologueSlide = {
   id: "retreat" | "depression" | "fertility" | "crime" | "question";
   label: string;
@@ -42,6 +55,50 @@ export const prologueSlides: PrologueSlide[] = [
   { id: "fertility", label: "03", text: "fertility rates are dropping", note: "Fewer families are forming." },
   { id: "crime", label: "04", text: "crime rates are increasing", note: "Social trust is fraying." },
   { id: "question", label: "05", text: "what’s happening?", note: "To understand the conflict, choose a perspective." },
+];
+
+// The two character paths share a chapter structure so each new realization
+// can be compared without forcing both perspectives to reach the same answer.
+export const experienceSections: ExperienceSection[] = [
+  {
+    id: "selection",
+    number: "01",
+    mapLabel: "Selection",
+    eyebrow: "Mates · demands · expectations",
+    title: "Selection logic",
+    description: "How the available choice set changes attraction, filtering, approach, commitment, and expectations toward a partner.",
+    lenses: ["Choice set", "Partner filters", "Commitment"],
+    prompt: {
+      male: "What shapes whom men approach, consider attainable, and commit to—and what do they expect in return?",
+      female: "What shapes whom women notice, consider desirable, and commit to—and what do they expect in return?",
+    },
+  },
+  {
+    id: "politics",
+    number: "02",
+    mapLabel: "Politics",
+    eyebrow: "Voting · priorities · institutions",
+    title: "Voting logic",
+    description: "How lived pressures, incentives, risk, values, and trust in institutions can shape political priorities and voting choices.",
+    lenses: ["Priorities", "Risk & security", "Institutional trust"],
+    prompt: {
+      male: "Which experiences and incentives make a political choice feel protective of men’s interests or view of society?",
+      female: "Which experiences and incentives make a political choice feel protective of women’s interests or view of society?",
+    },
+  },
+  {
+    id: "value",
+    number: "03",
+    mapLabel: "Value & age",
+    eyebrow: "Age · feedback · opportunity",
+    title: "Personal value",
+    description: "How self-worth and perceived social or romantic value change across life stages—and why those measures may diverge.",
+    lenses: ["Life stage", "Social feedback", "Opportunity"],
+    prompt: {
+      male: "How do age, health, competence, relationships, resources, and social standing change perceived value over time?",
+      female: "How do age, health, competence, relationships, resources, and social standing change perceived value over time?",
+    },
+  },
 ];
 
 // New realizations become self-contained scenario records here. The UI can then
