@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { IconMan, IconMap2, IconWoman } from "@tabler/icons-react";
-import { prologueSlides as slides, type Gender } from "@/app/content/story";
+import { prologueSlides as slides, terminology, type Gender } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience";
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
@@ -64,6 +64,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  const [terminologyOpen, setTerminologyOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [floodTone, setFloodTone] = useState<"male" | "female" | "neutral" | null>(null);
@@ -123,6 +124,7 @@ export default function Home() {
     setSettingsOpen(false);
     setRecapOpen(false);
     setMapOpen(false);
+    setTerminologyOpen(false);
     setScreen("menu");
   }
 
@@ -165,6 +167,9 @@ export default function Home() {
               </button>
               <button className="menu-action" onClick={() => setMapOpen(true)}>
                 <span className="menu-index">04</span><strong>Map</strong><i>⌖</i>
+              </button>
+              <button className="menu-action" onClick={() => setTerminologyOpen(true)}>
+                <span className="menu-index">05</span><strong>Terminology</strong><i>≡</i>
               </button>
             </nav>
           </div>
@@ -272,11 +277,23 @@ export default function Home() {
         </section>
       )}
 
-      {(settingsOpen || recapOpen || mapOpen) && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); }}>
-          <section className={`game-modal ${mapOpen ? "map-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); }} aria-label="Close">×</button>
-            {mapOpen ? (
+      {(settingsOpen || recapOpen || mapOpen || terminologyOpen) && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }}>
+          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }} aria-label="Close">×</button>
+            {terminologyOpen ? (
+              <>
+                <span className="modal-kicker">Language of the debate</span><h2 id="modal-title">Terminology</h2>
+                <p className="terms-intro">These labels change across communities. The glossary describes common usage without endorsing the worldview behind it.</p>
+                <div className="terms-list">
+                  {terminology.map((term) => (
+                    <article className={`term-card ${term.id}`} key={term.id}>
+                      <span className="term-dot" /><div><h3>{term.name}</h3><p>{term.shortDefinition}</p><small>{term.context}</small><a href={term.sources[0].url} target="_blank" rel="noreferrer">Source: {term.sources[0].label} ↗</a></div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : mapOpen ? (
               <>
                 <span className="modal-kicker">Your journey</span><h2 id="modal-title">Map</h2>
                 <div className="dual-map">
