@@ -12,9 +12,9 @@ export const metadata: Metadata = {
     title: "Gender War",
     description: "Choose a side. Understand both.",
     url: "https://genderwar.bekulov.com/",
-    images: [{ url: "https://genderwar.bekulov.com/og-gender-war-glass.png", width: 1536, height: 1024, alt: "Gender War interactive story" }],
+    images: [{ url: "https://genderwar.bekulov.com/og-gender-war-flat.png", width: 1536, height: 1024, alt: "Gender War interactive story" }],
   },
-  twitter: { card: "summary_large_image", title: "Gender War", description: "Choose a side. Understand both.", images: ["https://genderwar.bekulov.com/og-gender-war-glass.png"] },
+  twitter: { card: "summary_large_image", title: "Gender War", description: "Choose a side. Understand both.", images: ["https://genderwar.bekulov.com/og-gender-war-flat.png"] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
