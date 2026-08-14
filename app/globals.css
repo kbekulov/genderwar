@@ -116,6 +116,13 @@ button,input{font:inherit}button{color:inherit}
 .story-depression .story-number,.story-fertility .story-number{background:var(--female-soft);color:var(--female)}
 .story-copy h2{margin:0;max-width:760px;font-size:clamp(50px,7vw,96px);font-weight:900;line-height:.96;letter-spacing:-.055em;text-wrap:balance}
 .story-copy p{margin:22px 0 0;font-size:17px;font-weight:700;color:var(--muted)}
+.story-tap-layer{position:absolute;z-index:6;inset:72px 0 0;width:100%;border:0;background:transparent;cursor:e-resize;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.story-tap-layer:focus-visible{outline:4px solid var(--male);outline-offset:-8px}
+.story-depression .story-tap-layer:focus-visible,.story-fertility .story-tap-layer:focus-visible{outline-color:var(--female)}
+.story-gesture-hint{position:absolute;z-index:7;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:18px;min-width:330px;padding:13px 16px;border-radius:17px;background:var(--surface);box-shadow:0 5px 18px rgba(37,50,67,.09);pointer-events:none}
+.story-gesture-hint span{font-size:10px;font-weight:900;color:#9aa1aa}.story-gesture-hint strong{flex:1;font-size:12px;font-weight:900;color:var(--ink)}.story-gesture-hint i{font-style:normal;font-size:19px;color:var(--male)}
+.story-depression .story-gesture-hint i,.story-fertility .story-gesture-hint i{color:var(--female)}
+.story-flood{position:fixed;z-index:20;inset:0;pointer-events:none;animation:flood-screen .68s cubic-bezier(.65,0,.35,1) both}.story-flood.male{background:var(--male)}.story-flood.female{background:var(--female)}.story-flood.neutral{background:var(--ink)}
 .story-controls{
   position:absolute;z-index:7;left:clamp(20px,4vw,56px);right:clamp(20px,4vw,56px);bottom:max(20px,env(safe-area-inset-bottom));
   display:flex;align-items:center;justify-content:space-between;gap:24px;padding:12px 12px 12px 20px;border-radius:20px;background:var(--surface);box-shadow:0 6px 22px rgba(37,50,67,.08);
@@ -184,6 +191,7 @@ button,input{font:inherit}button{color:inherit}
 @keyframes bar-in{from{transform:scaleY(0)}}
 @keyframes ring{from{transform:scale(.72);opacity:.18}to{transform:scale(1.08);opacity:0}}
 @keyframes progress{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes flood-screen{0%{clip-path:circle(0 at 50% 105%)}49%{clip-path:circle(155vmax at 50% 105%)}51%{clip-path:circle(155vmax at 50% -5%)}100%{clip-path:circle(0 at 50% -5%)}}
 .reduce-motion *{animation:none!important;transition:none!important}.reduce-motion .story-progress button.active span:after{transform:none}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
 
@@ -194,6 +202,7 @@ button,input{font:inherit}button{color:inherit}
   .game-brand{font-size:clamp(55px,18vw,76px);gap:13px}.menu-tagline{font-size:17px}.menu-footer{bottom:max(10px,env(safe-area-inset-bottom));font-size:9px}.menu-footer span:last-child{display:none}
   .story-header .game-brand{position:absolute;left:50%;transform:translateX(-50%);font-size:16px}.story-header .text-button{font-size:9px;padding:8px 4px}
   .story-copy{left:20px;right:20px;top:42%;max-width:none}.story-copy h2{font-size:clamp(43px,12vw,59px)}.story-copy p{font-size:15px}
+  .story-gesture-hint{left:16px;right:16px;bottom:max(15px,env(safe-area-inset-bottom));transform:none;min-width:0;width:auto;padding:13px 15px}.story-gesture-hint strong{font-size:11px}.story-tap-layer{inset:64px 0 0}
   .story-retreat:before,.story-depression:before,.story-fertility:before,.story-crime:before,.story-question:before{width:86vw;right:-32vw;top:20%}
   .story-controls{left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));padding:10px;flex-direction:column;align-items:stretch;gap:8px;border-radius:18px}.story-progress{max-width:none;padding:0 7px}.continue-button{width:100%}
   .trend-lines{right:4%;bottom:23%;width:68%;height:40%;gap:7px}.question-rings{right:-16%;width:78vw}

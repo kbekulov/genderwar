@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { IconMan, IconWoman } from "@tabler/icons-react";
 import { prologueSlides as slides, type Gender } from "@/app/content/story";
 
@@ -34,12 +34,14 @@ export default function Home() {
   const [recapOpen, setRecapOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [floodTone, setFloodTone] = useState<"male" | "female" | "neutral" | null>(null);
+  const pointerStart = useRef<number | null>(null);
+  const transitionLocked = useRef(false);
 
   useEffect(() => {
     if (!autoAdvance || screen !== "intro" || reducedMotion) return;
     const timer = window.setTimeout(() => {
-      if (slideIndex < slides.length - 1) setSlideIndex((value) => value + 1);
-      else setScreen("choose");
+      advanceSlide();
     }, 3500);
     return () => window.clearTimeout(timer);
   }, [autoAdvance, reducedMotion, screen, slideIndex]);
@@ -50,9 +52,39 @@ export default function Home() {
     setScreen("intro");
   }
 
+  function toneForSlide(index: number): "male" | "female" | "neutral" {
+    const id = slides[index]?.id;
+    if (id === "retreat" || id === "crime") return "male";
+    if (id === "depression" || id === "fertility") return "female";
+    return "neutral";
+  }
+
+  function moveToSlide(index: number | "choose") {
+    if (transitionLocked.current) return;
+    transitionLocked.current = true;
+    setFloodTone(index === "choose" ? "neutral" : toneForSlide(index));
+    window.setTimeout(() => {
+      if (index === "choose") setScreen("choose");
+      else setSlideIndex(index);
+    }, reducedMotion ? 0 : 330);
+    window.setTimeout(() => {
+      setFloodTone(null);
+      transitionLocked.current = false;
+    }, reducedMotion ? 30 : 680);
+  }
+
   function advanceSlide() {
-    if (slideIndex < slides.length - 1) setSlideIndex((value) => value + 1);
-    else setScreen("choose");
+    if (slideIndex < slides.length - 1) moveToSlide(slideIndex + 1);
+    else moveToSlide("choose");
+  }
+
+  function handleStoryPointerUp(event: PointerEvent<HTMLButtonElement>) {
+    const start = pointerStart.current;
+    pointerStart.current = null;
+    if (start === null) return;
+    const distance = event.clientX - start;
+    if (distance > 48 && slideIndex > 0) moveToSlide(slideIndex - 1);
+    else advanceSlide();
   }
 
   function returnToMenu() {
@@ -125,18 +157,22 @@ export default function Home() {
             <p>{slides[slideIndex].note}</p>
           </div>
 
-          <div className="story-controls">
-            <div className="story-progress" aria-label={`Slide ${slideIndex + 1} of ${slides.length}`}>
-              {slides.map((slide, index) => (
-                <button key={slide.id} onClick={() => setSlideIndex(index)} className={index === slideIndex ? "active" : index < slideIndex ? "seen" : ""} aria-label={`Go to slide ${index + 1}`}>
-                  <span /><small>{slide.label}</small>
-                </button>
-              ))}
-            </div>
-            <button className="continue-button" onClick={advanceSlide}>
-              <span>{slideIndex === slides.length - 1 ? "Choose a character" : "Continue"}</span><i>→</i>
-            </button>
+          <button
+            className="story-tap-layer"
+            aria-label={slideIndex === slides.length - 1 ? "Continue to character selection" : "Continue to next story slide"}
+            onPointerDown={(event) => { pointerStart.current = event.clientX; }}
+            onPointerUp={handleStoryPointerUp}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") advanceSlide();
+              if (event.key === "ArrowLeft" && slideIndex > 0) moveToSlide(slideIndex - 1);
+            }}
+          />
+          <div className="story-gesture-hint" aria-hidden="true">
+            <span>{String(slideIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
+            <strong>{slideIndex === slides.length - 1 ? "Tap to choose your character" : "Tap or swipe to continue"}</strong>
+            <i>→</i>
           </div>
+          {floodTone && <div className={`story-flood ${floodTone}`} aria-hidden="true" />}
         </section>
       )}
 
