@@ -12,7 +12,8 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { experienceSections, prologueSlides as slides, terminology, type ExperienceSectionId, type Gender } from "@/app/content/story";
+import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { experienceSections, ideologySeries, prologueSlides as slides, terminology, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
@@ -79,6 +80,47 @@ function JourneyStageNode({ data }: NodeProps<JourneyNode>) {
 }
 
 const journeyNodeTypes = { journey: JourneyStageNode };
+
+function IdeologyChart({ country, data, compact = false }: { country: keyof typeof ideologySeries; data: IdeologyPoint[]; compact?: boolean }) {
+  return (
+    <section className={`ideology-chart ${compact ? "compact" : ""}`} aria-label={`${country} political ideology trend chart`}>
+      <header><strong>{country}</strong><span><i className="women-key" />Women <i className="men-key" />Men</span></header>
+      <div className="chart-frame">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: compact ? -28 : -18 }}>
+            <CartesianGrid vertical={false} stroke="rgba(37,50,67,.11)" />
+            <ReferenceLine y={0} stroke="rgba(37,50,67,.48)" strokeWidth={1.5} />
+            <XAxis dataKey="year" axisLine={false} tickLine={false} minTickGap={18} tick={{ fill: "#747d89", fontSize: compact ? 8 : 10, fontWeight: 800 }} />
+            <YAxis domain={[-30, 50]} ticks={[-20, 0, 20, 40]} axisLine={false} tickLine={false} tickFormatter={(value) => `${value > 0 ? "+" : ""}${value}`} tick={{ fill: "#747d89", fontSize: compact ? 8 : 10, fontWeight: 800 }} />
+            <Tooltip labelFormatter={(year) => `Year ${year}`} formatter={(value, name) => [`${Number(value) > 0 ? "+" : ""}${value} points`, name === "women" ? "Women" : "Men"]} contentStyle={{ border: 0, borderRadius: 14, boxShadow: "0 8px 28px rgba(37,50,67,.16)", fontSize: 11, fontWeight: 800 }} />
+            <Area type="monotone" dataKey="women" stroke="var(--female)" strokeWidth={compact ? 3 : 4} fill="var(--female)" fillOpacity={0.12} dot={false} activeDot={{ r: 5 }} />
+            <Line type="monotone" dataKey="men" stroke="var(--male)" strokeWidth={compact ? 3 : 4} dot={false} activeDot={{ r: 5 }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+function VotingCharts() {
+  return (
+    <section className="voting-data" aria-labelledby="ideology-gap-title">
+      <header className="voting-data-heading">
+        <span>Observed pattern · ages 18–29</span>
+        <h3 id="ideology-gap-title">A widening ideology gap</h3>
+        <p>Political ideology shown as percentage liberal minus percentage conservative, by sex.</p>
+      </header>
+      <IdeologyChart country="US" data={ideologySeries.US} />
+      <div className="global-chart-grid">
+        {(Object.keys(ideologySeries) as Array<keyof typeof ideologySeries>).map((country) => <IdeologyChart key={country} country={country} data={ideologySeries[country]} compact />)}
+      </div>
+      <footer className="chart-source">
+        <p><strong>Reading:</strong> above zero is more liberal; below zero is more conservative. The pink area emphasizes the women’s trend, while blue tracks men.</p>
+        <p>Approximate reconstruction from the supplied <a href="https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998" target="_blank" rel="noreferrer">Financial Times graphic ↗</a>. Values are digitized visually, not raw survey records. <a href="https://youngamericans.berkeley.edu/2024/02/are-the-ideologies-of-young-women-and-young-men-in-the-us-diverging/" target="_blank" rel="noreferrer">Methodological context ↗</a></p>
+      </footer>
+    </section>
+  );
+}
 
 function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; visitedSections: ExperienceSectionId[]; onNavigate: (screen: Screen) => void }) {
   const progress = mapStages.findIndex((stage) => stage.screen === screen);
@@ -413,6 +455,7 @@ export default function Home() {
             <h2>{activeSection.title}</h2>
             <p className="chapter-description">{activeSection.description}</p>
             <blockquote>{activeSection.prompt[gender]}</blockquote>
+            {activeSection.id === "politics" && <VotingCharts />}
             <div className="chapter-lenses" aria-label="Topics in this chapter">
               {activeSection.lenses.map((lens, index) => <span key={lens}><b>{String(index + 1).padStart(2, "0")}</b>{lens}</span>)}
             </div>

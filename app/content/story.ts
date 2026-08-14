@@ -13,6 +13,8 @@ export type ExperienceSection = {
   prompt: Record<Gender, string>;
 };
 
+export type IdeologyPoint = { year: number; women: number; men: number };
+
 export type PrologueSlide = {
   id: "retreat" | "depression" | "fertility" | "crime" | "question";
   label: string;
@@ -100,6 +102,33 @@ export const experienceSections: ExperienceSection[] = [
     },
   },
 ];
+
+// Approximate values digitized from the published FT graphic supplied as the
+// visual reference. They preserve the displayed trend, not survey microdata.
+export const ideologySeries: Record<"South Korea" | "US" | "Germany" | "UK", IdeologyPoint[]> = {
+  "South Korea": [
+    { year: 2000, women: 12, men: 13 }, { year: 2005, women: 4, men: 3 },
+    { year: 2010, women: 14, men: 8 }, { year: 2015, women: 22, men: 15 },
+    { year: 2020, women: 17, men: 0 }, { year: 2022, women: 28, men: -25 },
+  ],
+  US: [
+    { year: 1985, women: 10, men: 12 }, { year: 1990, women: 15, men: 4 },
+    { year: 2000, women: 11, men: 8 }, { year: 2010, women: 14, men: 5 },
+    { year: 2015, women: 20, men: 8 }, { year: 2020, women: 34, men: 2 },
+    { year: 2022, women: 40, men: 0 },
+  ],
+  Germany: [
+    { year: 1980, women: 10, men: 8 }, { year: 1990, women: 17, men: 15 },
+    { year: 2000, women: 8, men: 4 }, { year: 2010, women: 7, men: 0 },
+    { year: 2020, women: 22, men: -4 },
+  ],
+  UK: [
+    { year: 1985, women: 14, men: 12 }, { year: 1990, women: 4, men: 3 },
+    { year: 2000, women: 10, men: 7 }, { year: 2010, women: 8, men: 12 },
+    { year: 2015, women: 10, men: 14 }, { year: 2018, women: 40, men: 22 },
+    { year: 2022, women: 45, men: 25 },
+  ],
+};
 
 // New realizations become self-contained scenario records here. The UI can then
 // render them without changing navigation, character selection, or global state.
