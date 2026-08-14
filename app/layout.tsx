@@ -6,14 +6,15 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Common Ground — Same moment. Different maps.",
-  description: "An interactive experiment about how communication differences become conflict—and how clarity helps.",
+  title: "Gender War — Choose your experience",
+  description: "An interactive story about the male and female experience in a changing society.",
   openGraph: {
-    title: "Common Ground",
-    description: "Same moment. Different maps.",
-    images: [{ url: "/og.png", width: 1536, height: 1024, alt: "Common Ground interactive experience" }],
+    title: "Gender War",
+    description: "Choose a side. Understand both.",
+    url: "https://genderwar.bekulov.com/",
+    images: [{ url: "https://genderwar.bekulov.com/og-gender-war.png", width: 1536, height: 1024, alt: "Gender War interactive story" }],
   },
-  twitter: { card: "summary_large_image", title: "Common Ground", description: "Same moment. Different maps.", images: ["/og.png"] },
+  twitter: { card: "summary_large_image", title: "Gender War", description: "Choose a side. Understand both.", images: ["https://genderwar.bekulov.com/og-gender-war.png"] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

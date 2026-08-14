@@ -1,8 +1,8 @@
-# Common Ground
+# Gender War
 
-An interactive, mobile-first learning experience about how different interpretations of the same social signal can create conflict.
+A responsive, game-like interactive story exploring the male and female experience in a changing society.
 
-The demo follows Alex and Maya through three short scenarios. Visitors can choose a response, see how it changes the interaction, and experiment with how signal clarity affects interpretation.
+The current prologue includes a cinematic main menu, five animated opening slides, character selection, and a personalized entry into either perspective. Scenario chapters will be added next.
 
 ## Run locally
 
