@@ -52,7 +52,12 @@ export default function Home() {
   const [scenario, setScenario] = useState(0);
   const [choice, setChoice] = useState<Approach | null>(null);
   const [clarity, setClarity] = useState(38);
+  const [poolSize, setPoolSize] = useState<10 | 1000>(10);
+  const [selectionRun, setSelectionRun] = useState(0);
+  const [selectedProfile, setSelectedProfile] = useState(4);
+  const [isScanning, setIsScanning] = useState(false);
   const current = scenarios[scenario];
+  const visibleProfiles = poolSize === 10 ? 10 : 72;
 
   const result = useMemo(() => {
     if (!choice) return null;
@@ -68,6 +73,25 @@ export default function Home() {
     setScenario((value) => (value + 1) % scenarios.length);
     setChoice(null);
     setClarity(38);
+  }
+
+  function changePool(size: 10 | 1000) {
+    setPoolSize(size);
+    setSelectedProfile(size === 10 ? 4 : 47);
+    setSelectionRun((value) => value + 1);
+    setIsScanning(false);
+  }
+
+  function runSelection() {
+    setIsScanning(true);
+    setSelectionRun((value) => value + 1);
+    const next = poolSize === 10
+      ? (selectionRun * 3 + 7) % 10
+      : (selectionRun * 17 + 31) % visibleProfiles;
+    window.setTimeout(() => {
+      setSelectedProfile(next);
+      setIsScanning(false);
+    }, 900);
   }
 
   return (
@@ -177,6 +201,74 @@ export default function Home() {
           <div className="takeaway"><span>Key idea</span><p>{current.insight}</p></div>
           <button onClick={nextScenario}>Next scenario <span>→</span></button>
         </footer>
+      </section>
+
+      <section className="choice-expansion" id="choice-expansion">
+        <header className="choice-heading">
+          <div>
+            <p>Chapter 04 · Choice expansion</p>
+            <h2>What changes when<br />the room becomes a feed?</h2>
+          </div>
+          <p className="choice-intro">In a local setting, Maya may encounter a small group. A digital feed can place hundreds of possible partners into the same comparison set—even though her attention still lands on one person at a time.</p>
+        </header>
+
+        <div className="environment-switch" role="group" aria-label="Choose an environment">
+          <button onClick={() => changePool(10)} className={poolSize === 10 ? "active" : ""} aria-pressed={poolSize === 10}>
+            <span className="switch-number">10</span>
+            <span><strong>Local circle</strong><small>people she might realistically meet</small></span>
+          </button>
+          <button onClick={() => changePool(1000)} className={poolSize === 1000 ? "active" : ""} aria-pressed={poolSize === 1000}>
+            <span className="switch-number">1,000</span>
+            <span><strong>Digital feed</strong><small>profiles within reach of a swipe</small></span>
+          </button>
+        </div>
+
+        <div className={`choice-stage ${poolSize === 1000 ? "digital" : "local"} ${isScanning ? "scanning" : ""}`}>
+          <div className="stage-topline">
+            <span>{poolSize === 10 ? "A room-sized choice set" : "An algorithm-sized choice set"}</span>
+            <span>{poolSize === 1000 ? "72 shown · 928 implied" : "all 10 shown"}</span>
+          </div>
+          <div className="profile-field" aria-label={`${poolSize} possible profiles, one selected`}>
+            {Array.from({ length: visibleProfiles }).map((_, index) => (
+              <span
+                key={`${poolSize}-${index}`}
+                className={`profile-dot ${index === selectedProfile && !isScanning ? "chosen" : ""}`}
+                style={{ "--delay": `${(index % 12) * 24}ms` } as CSSProperties}
+                aria-hidden="true"
+              >
+                <i /><b />
+              </span>
+            ))}
+            {poolSize === 1000 && <span className="more-profiles">+928</span>}
+            <span key={selectionRun} className="selection-beam" />
+          </div>
+          <div className="observer">
+            <span className="attention-cone" />
+            <div className="maya-observer"><Person kind="her" /><span>Maya</span></div>
+          </div>
+        </div>
+
+        <div className="choice-controls">
+          <button className="run-choice" onClick={runSelection} disabled={isScanning}>
+            <span>{isScanning ? "Scanning" : "Run selection"}</span><i>{isScanning ? "···" : "→"}</i>
+          </button>
+          <div className="choice-metrics" aria-live="polite">
+            <div><span>Choice set</span><strong>{poolSize.toLocaleString()}</strong><small>candidates in view</small></div>
+            <div><span>One profile’s share</span><strong>{poolSize === 10 ? "10%" : "0.1%"}</strong><small>of this comparison set</small></div>
+            <div><span>Result</span><strong>1</strong><small>person receives attention</small></div>
+          </div>
+        </div>
+
+        <div className="choice-explanation">
+          <div className="explanation-number">{poolSize === 10 ? "10×" : "1,000×"}</div>
+          <div>
+            <span className="step-label">The mechanism</span>
+            <h3>{poolSize === 10 ? "A smaller set makes each person more visible." : "More options change the reference point—not the amount of attention."}</h3>
+            <p>{poolSize === 10 ? "With ten people in the comparison set, individual qualities are easier to notice and the idea of the “best available” is bounded by a real social environment." : "A feed expands who appears available. That can raise comparison pressure and make each profile easier to replace, even though time and attention have not expanded with the pool."}</p>
+          </div>
+        </div>
+
+        <p className="model-note"><strong>Important:</strong> this is a model of how choice architecture can shape perception, not a claim that all women rank partners the same way. Digital abundance can affect anyone; this chapter explores the female-side example from the sketch.</p>
       </section>
 
       <section className="closing">
