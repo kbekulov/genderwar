@@ -14,6 +14,7 @@ import {
 } from "@xyflow/react";
 import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getTranslation, localeOptions, type Locale } from "@/app/content/i18n";
+import { claimsUi, getClaims } from "@/app/content/claims";
 import { ideologySeries, type ExperienceSection, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
@@ -213,6 +214,8 @@ export default function Home() {
   const [mapOpen, setMapOpen] = useState(false);
   const [terminologyOpen, setTerminologyOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [claimsOpen, setClaimsOpen] = useState(false);
+  const [selectedClaimId, setSelectedClaimId] = useState<number | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [floodTone, setFloodTone] = useState<"male" | "female" | "neutral" | null>(null);
@@ -221,6 +224,8 @@ export default function Home() {
   const localeReady = useRef(false);
   const copy = getTranslation(locale);
   const { ui, slides, sections: experienceSections, terms: terminology } = copy;
+  const claims = getClaims(locale);
+  const claimCopy = claimsUi[locale];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -285,6 +290,7 @@ export default function Home() {
     setMapOpen(false);
     setTerminologyOpen(false);
     setLanguageOpen(false);
+    setClaimsOpen(false);
     setScreen("menu");
   }
 
@@ -306,7 +312,13 @@ export default function Home() {
     setScreen(section);
   }
 
+  function openClaim(id: number) {
+    setSelectedClaimId(id);
+    setClaimsOpen(true);
+  }
+
   const activeSection = experienceSections.find((section) => section.id === screen);
+  const selectedClaim = claims.find((claim) => claim.id === selectedClaimId) ?? null;
   const currentLocale = localeOptions.find((option) => option.id === locale) ?? localeOptions[0];
 
   useEffect(() => {
@@ -355,6 +367,9 @@ export default function Home() {
               </button>
               <button className="menu-action" onClick={() => setTerminologyOpen(true)}>
                 <span className="menu-index">05</span><strong>{ui.terminology}</strong><i>≡</i>
+              </button>
+              <button className="menu-action" onClick={() => { setSelectedClaimId(null); setClaimsOpen(true); }}>
+                <span className="menu-index">06</span><strong>{claimCopy.menu}</strong><i>◇</i>
               </button>
             </nav>
           </div>
@@ -485,6 +500,14 @@ export default function Home() {
             <p className="chapter-description">{activeSection.description}</p>
             <blockquote>{activeSection.prompt[gender]}</blockquote>
             {activeSection.id === "politics" && <VotingCharts locale={locale} ui={ui} />}
+            <section className="chapter-claims" aria-label={claimCopy.menu}>
+              <header><span>{claimCopy.hypothesis}</span><strong>{claimCopy.menu}</strong></header>
+              <div>
+                {claims.filter((claim) => claim.category === activeSection.id).map((claim) => (
+                  <button key={claim.id} onClick={() => openClaim(claim.id)}><b>{String(claim.id).padStart(2, "0")}</b><span>{claim.title}</span><i>→</i></button>
+                ))}
+              </div>
+            </section>
             <div className="chapter-lenses" aria-label={ui.topics}>
               {activeSection.lenses.map((lens, index) => <span key={lens}><b>{String(index + 1).padStart(2, "0")}</b>{lens}</span>)}
             </div>
@@ -501,11 +524,28 @@ export default function Home() {
         </section>
       )}
 
-      {(settingsOpen || recapOpen || mapOpen || terminologyOpen || languageOpen) && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget !== event.target) return; setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); }}>
-          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""} ${languageOpen ? "language-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); }} aria-label={ui.close}>×</button>
-            {languageOpen ? (
+      {(settingsOpen || recapOpen || mapOpen || terminologyOpen || languageOpen || claimsOpen) && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget !== event.target) return; setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); setClaimsOpen(false); }}>
+          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""} ${languageOpen ? "language-modal" : ""} ${claimsOpen ? "claims-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); setClaimsOpen(false); }} aria-label={ui.close}>×</button>
+            {claimsOpen ? (
+              <>
+                <span className="modal-kicker">{claimCopy.hypothesis} · {claimCopy.evidence}</span><h2 id="modal-title">{claimCopy.title}</h2>
+                {selectedClaim ? (
+                  <article className="claim-detail">
+                    <button className="claim-back" onClick={() => setSelectedClaimId(null)}>← {claimCopy.back}</button>
+                    <header><span>{String(selectedClaim.id).padStart(2, "0")}</span><div><small>{claimCopy.related[selectedClaim.category]}</small><h3>{selectedClaim.title}</h3></div></header>
+                    <p>{selectedClaim.proposition}</p>
+                    <div className="claim-caution"><span>{claimCopy.hypothesis}</span><strong>{claimCopy.caution[selectedClaim.caution]}</strong><i>{claimCopy.evidence}</i></div>
+                    <div className="claim-questions"><p><b>?</b>{claimCopy.assumptions}</p><p><b>↯</b>{claimCopy.counterexample}</p></div>
+                  </article>
+                ) : (
+                  <><p className="claims-intro">{claimCopy.intro}</p><div className="claims-grid">{claims.map((claim) => (
+                    <button key={claim.id} onClick={() => setSelectedClaimId(claim.id)}><span>{String(claim.id).padStart(2, "0")}</span><small>{claimCopy.related[claim.category]}</small><strong>{claim.title}</strong><i>{claimCopy.caution[claim.caution]}</i></button>
+                  ))}</div></>
+                )}
+              </>
+            ) : languageOpen ? (
               <>
                 <span className="modal-kicker">{ui.system}</span><h2 id="modal-title">{ui.language}</h2>
                 <div className="language-grid">
