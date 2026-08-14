@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { IconBuildingBank, IconHeartHandshake, IconMan, IconMap2, IconTrendingUp, IconWoman } from "@tabler/icons-react";
+import { IconBuildingBank, IconHeartHandshake, IconLanguage, IconMan, IconMap2, IconTrendingUp, IconWoman } from "@tabler/icons-react";
 import {
   Background,
   BackgroundVariant,
@@ -13,7 +13,8 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { experienceSections, ideologySeries, prologueSlides as slides, terminology, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
+import { getTranslation, localeOptions, type Locale } from "@/app/content/i18n";
+import { ideologySeries, type ExperienceSection, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
@@ -37,13 +38,8 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-const mapStages: Array<{ screen: Screen; label: string; detail: string }> = [
-  { screen: "menu", label: "Origin", detail: "Begin the journey" },
-  { screen: "intro", label: "The signals", detail: "Five changes in society" },
-  { screen: "choose", label: "Perspective", detail: "Choose whose path to follow" },
-  { screen: "experience", label: "Experience", detail: "Three lenses on the path" },
-  ...experienceSections.map((section) => ({ screen: section.id, label: section.mapLabel, detail: section.eyebrow })),
-];
+type AppCopy = ReturnType<typeof getTranslation>;
+type MapStage = { screen: Screen; label: string; detail: string };
 
 const sectionIcons = {
   selection: IconHeartHandshake,
@@ -52,12 +48,14 @@ const sectionIcons = {
 };
 
 type JourneyNodeData = {
-  stage: (typeof mapStages)[number];
+  stage: MapStage;
   index: number;
   locked: boolean;
   current: boolean;
   done: boolean;
   mismatch: boolean;
+  mismatchLabel: string;
+  currentLabel: string;
   onNavigate: (screen: Screen) => void;
 };
 
@@ -71,7 +69,7 @@ function JourneyStageNode({ data }: NodeProps<JourneyNode>) {
         <span className="path-checkpoint">{data.done ? "✓" : data.index + 1}</span>
         <span className="path-label">
           <strong>{data.stage.label}</strong>
-          <small>{data.mismatch ? "Other path" : data.current ? "You are here" : data.stage.detail}</small>
+          <small>{data.mismatch ? data.mismatchLabel : data.current ? data.currentLabel : data.stage.detail}</small>
         </span>
       </button>
       <Handle type="source" position={Position.Top} />
@@ -81,10 +79,12 @@ function JourneyStageNode({ data }: NodeProps<JourneyNode>) {
 
 const journeyNodeTypes = { journey: JourneyStageNode };
 
-function IdeologyChart({ country, data, compact = false }: { country: keyof typeof ideologySeries; data: IdeologyPoint[]; compact?: boolean }) {
+function IdeologyChart({ country, data, locale, ui, compact = false }: { country: keyof typeof ideologySeries; data: IdeologyPoint[]; locale: Locale; ui: AppCopy["ui"]; compact?: boolean }) {
+  const regionCode = { "South Korea": "KR", US: "US", Germany: "DE", UK: "GB" }[country];
+  const countryName = new Intl.DisplayNames([locale], { type: "region" }).of(regionCode) ?? country;
   return (
-    <section className={`ideology-chart ${compact ? "compact" : ""}`} aria-label={`${country} political ideology trend chart`}>
-      <header><strong>{country}</strong><span><i className="women-key" />Women <i className="men-key" />Men</span></header>
+    <section className={`ideology-chart ${compact ? "compact" : ""}`} aria-label={`${countryName}: ${ui.ideologyGap}`}>
+      <header><strong>{countryName}</strong><span><i className="women-key" />{ui.women} <i className="men-key" />{ui.men}</span></header>
       <div className="chart-frame">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: compact ? -28 : -18 }}>
@@ -92,7 +92,7 @@ function IdeologyChart({ country, data, compact = false }: { country: keyof type
             <ReferenceLine y={0} stroke="rgba(37,50,67,.48)" strokeWidth={1.5} />
             <XAxis dataKey="year" axisLine={false} tickLine={false} minTickGap={18} tick={{ fill: "#747d89", fontSize: compact ? 8 : 10, fontWeight: 800 }} />
             <YAxis domain={[-30, 50]} ticks={[-20, 0, 20, 40]} axisLine={false} tickLine={false} tickFormatter={(value) => `${value > 0 ? "+" : ""}${value}`} tick={{ fill: "#747d89", fontSize: compact ? 8 : 10, fontWeight: 800 }} />
-            <Tooltip labelFormatter={(year) => `Year ${year}`} formatter={(value, name) => [`${Number(value) > 0 ? "+" : ""}${value} points`, name === "women" ? "Women" : "Men"]} contentStyle={{ border: 0, borderRadius: 14, boxShadow: "0 8px 28px rgba(37,50,67,.16)", fontSize: 11, fontWeight: 800 }} />
+            <Tooltip labelFormatter={(year) => `${ui.year} ${year}`} formatter={(value, name) => [`${Number(value) > 0 ? "+" : ""}${value} ${ui.points}`, name === "women" ? ui.women : ui.men]} contentStyle={{ border: 0, borderRadius: 14, boxShadow: "0 8px 28px rgba(37,50,67,.16)", fontSize: 11, fontWeight: 800 }} />
             <Area type="monotone" dataKey="women" stroke="var(--female)" strokeWidth={compact ? 3 : 4} fill="var(--female)" fillOpacity={0.12} dot={false} activeDot={{ r: 5 }} />
             <Line type="monotone" dataKey="men" stroke="var(--male)" strokeWidth={compact ? 3 : 4} dot={false} activeDot={{ r: 5 }} />
           </AreaChart>
@@ -102,27 +102,34 @@ function IdeologyChart({ country, data, compact = false }: { country: keyof type
   );
 }
 
-function VotingCharts() {
+function VotingCharts({ locale, ui }: { locale: Locale; ui: AppCopy["ui"] }) {
   return (
     <section className="voting-data" aria-labelledby="ideology-gap-title">
       <header className="voting-data-heading">
-        <span>Observed pattern · ages 18–29</span>
-        <h3 id="ideology-gap-title">A widening ideology gap</h3>
-        <p>Political ideology shown as percentage liberal minus percentage conservative, by sex.</p>
+        <span>{ui.observedPattern}</span>
+        <h3 id="ideology-gap-title">{ui.ideologyGap}</h3>
+        <p>{ui.ideologySubtitle}</p>
       </header>
-      <IdeologyChart country="US" data={ideologySeries.US} />
+      <IdeologyChart country="US" data={ideologySeries.US} locale={locale} ui={ui} />
       <div className="global-chart-grid">
-        {(Object.keys(ideologySeries) as Array<keyof typeof ideologySeries>).map((country) => <IdeologyChart key={country} country={country} data={ideologySeries[country]} compact />)}
+        {(Object.keys(ideologySeries) as Array<keyof typeof ideologySeries>).map((country) => <IdeologyChart key={country} country={country} data={ideologySeries[country]} locale={locale} ui={ui} compact />)}
       </div>
       <footer className="chart-source">
-        <p><strong>Reading:</strong> above zero is more liberal; below zero is more conservative. The pink area emphasizes the women’s trend, while blue tracks men.</p>
-        <p>Approximate reconstruction from the supplied <a href="https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998" target="_blank" rel="noreferrer">Financial Times graphic ↗</a>. Values are digitized visually, not raw survey records. <a href="https://youngamericans.berkeley.edu/2024/02/are-the-ideologies-of-young-women-and-young-men-in-the-us-diverging/" target="_blank" rel="noreferrer">Methodological context ↗</a></p>
+        <p><strong>{ui.source}:</strong> {ui.chartReading}</p>
+        <p>{ui.chartReconstruction} <a href="https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998" target="_blank" rel="noreferrer">Financial Times ↗</a> · <a href="https://youngamericans.berkeley.edu/2024/02/are-the-ideologies-of-young-women-and-young-men-in-the-us-diverging/" target="_blank" rel="noreferrer">{ui.methodology} ↗</a></p>
       </footer>
     </section>
   );
 }
 
-function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; visitedSections: ExperienceSectionId[]; onNavigate: (screen: Screen) => void }) {
+function JourneyMap({ side, screen, selectedGender, visitedSections, sections, ui, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; visitedSections: ExperienceSectionId[]; sections: ExperienceSection[]; ui: AppCopy["ui"]; onNavigate: (screen: Screen) => void }) {
+  const mapStages: MapStage[] = [
+    { screen: "menu", label: ui.origin, detail: ui.originDetail },
+    { screen: "intro", label: ui.signals, detail: ui.signalsDetail },
+    { screen: "choose", label: ui.perspective, detail: ui.perspectiveDetail },
+    { screen: "experience", label: ui.experience, detail: ui.experienceDetail },
+    ...sections.map((section) => ({ screen: section.id, label: section.mapLabel, detail: section.eyebrow })),
+  ];
   const progress = mapStages.findIndex((stage) => stage.screen === screen);
   const mirrored = side === "male";
   const nodes: JourneyNode[] = mapStages.map((stage, index) => {
@@ -145,6 +152,8 @@ function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate 
         current,
         done: !pathMismatch && (index < Math.min(progress, 4) || sectionVisited),
         mismatch: pathMismatch,
+        mismatchLabel: ui.otherPath,
+        currentLabel: ui.youAreHere,
         onNavigate,
       },
       draggable: false,
@@ -166,7 +175,7 @@ function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate 
 
   return (
     <section className={`journey-map ${side}`} aria-label={`${side} journey map`}>
-      <header><Character gender={side} /><span><small>{side} map</small><strong>The {side} path</strong></span></header>
+      <header><Character gender={side} /><span><small>{side === "female" ? ui.female : ui.male} · {ui.map}</small><strong>{side === "female" ? ui.femaleMap : ui.maleMap}</strong></span></header>
       <div className="journey-canvas">
         <ReactFlow
           nodes={nodes}
@@ -188,12 +197,13 @@ function JourneyMap({ side, screen, selectedGender, visitedSections, onNavigate 
           <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
         </ReactFlow>
       </div>
-      <p className="map-touch-hint">Drag to explore · pinch to zoom · tap a level</p>
+      <p className="map-touch-hint">{ui.mapHint}</p>
     </section>
   );
 }
 
 export default function Home() {
+  const [locale, setLocale] = useState<Locale>("en");
   const [screen, setScreen] = useState<Screen>("menu");
   const [slideIndex, setSlideIndex] = useState(0);
   const [gender, setGender] = useState<Gender | null>(null);
@@ -202,19 +212,30 @@ export default function Home() {
   const [recapOpen, setRecapOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [terminologyOpen, setTerminologyOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [floodTone, setFloodTone] = useState<"male" | "female" | "neutral" | null>(null);
   const pointerStart = useRef<number | null>(null);
   const transitionLocked = useRef(false);
+  const localeReady = useRef(false);
+  const copy = getTranslation(locale);
+  const { ui, slides, sections: experienceSections, terms: terminology } = copy;
 
   useEffect(() => {
-    if (!autoAdvance || screen !== "intro" || reducedMotion) return;
     const timer = window.setTimeout(() => {
-      advanceSlide();
-    }, 3500);
+      const saved = window.localStorage.getItem("genderwar-language") as Locale | null;
+      localeReady.current = true;
+      if (saved && localeOptions.some((option) => option.id === saved)) setLocale(saved);
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, [autoAdvance, reducedMotion, screen, slideIndex]);
+  }, []);
+
+  useEffect(() => {
+    if (!localeReady.current) return;
+    window.localStorage.setItem("genderwar-language", locale);
+    document.documentElement.lang = locale === "zh" ? "zh-Hans" : locale;
+  }, [locale]);
 
   function startGame() {
     setSlideIndex(0);
@@ -263,6 +284,7 @@ export default function Home() {
     setRecapOpen(false);
     setMapOpen(false);
     setTerminologyOpen(false);
+    setLanguageOpen(false);
     setScreen("menu");
   }
 
@@ -285,11 +307,21 @@ export default function Home() {
   }
 
   const activeSection = experienceSections.find((section) => section.id === screen);
+  const currentLocale = localeOptions.find((option) => option.id === locale) ?? localeOptions[0];
+
+  useEffect(() => {
+    if (!autoAdvance || screen !== "intro" || reducedMotion) return;
+    const timer = window.setTimeout(() => advanceSlide(), 3500);
+    return () => window.clearTimeout(timer);
+    // advanceSlide reads the current slide and is intentionally refreshed by slideIndex.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvance, reducedMotion, screen, slideIndex]);
 
   return (
     <main className={`game-shell ${reducedMotion ? "reduce-motion" : ""}`}>
       <div className="noise" />
-      <button className="map-dock" onClick={() => setMapOpen(true)} aria-label="Open journey map"><IconMap2 stroke={2.4} /><span>Map</span></button>
+      <button className="map-dock" onClick={() => setMapOpen(true)} aria-label={ui.map}><IconMap2 stroke={2.4} /><span>{ui.map}</span></button>
+      <button className="language-dock" onClick={() => setLanguageOpen(true)} aria-label={ui.language}><IconLanguage stroke={2.4} /><span>{currentLocale.short}</span></button>
 
       {screen === "menu" && (
         <section className="menu-screen screen-enter" aria-label="Gender War main menu">
@@ -300,46 +332,43 @@ export default function Home() {
           </div>
 
           <header className="menu-header">
-            <span>an interactive story</span>
-            <span>v0.3 · prologue</span>
+            <span>{ui.interactiveStory}</span>
+            <span>v0.5 · {ui.prologue}</span>
           </header>
 
           <div className="menu-content">
-            <p className="menu-kicker"><span /> two perspectives · one society</p>
+            <p className="menu-kicker"><span /> {ui.perspectives}</p>
             <h1><Brand /></h1>
-            <p className="menu-tagline">Choose a side.<br />Understand both.</p>
+            <p className="menu-tagline">{ui.taglineA}<br />{ui.taglineB}</p>
             <nav className="game-menu" aria-label="Game menu">
               <button className="menu-action primary" onClick={startGame}>
-                <span className="menu-index">01</span><strong>Start</strong><i>→</i>
+                <span className="menu-index">01</span><strong>{ui.start}</strong><i>→</i>
               </button>
               <button className="menu-action" onClick={() => setSettingsOpen(true)}>
-                <span className="menu-index">02</span><strong>Settings</strong><i>⌁</i>
+                <span className="menu-index">02</span><strong>{ui.settings}</strong><i>⌁</i>
               </button>
               <button className="menu-action" onClick={() => setRecapOpen(true)}>
-                <span className="menu-index">03</span><strong>Recap</strong><i>↺</i>
+                <span className="menu-index">03</span><strong>{ui.recap}</strong><i>↺</i>
               </button>
               <button className="menu-action" onClick={() => setMapOpen(true)}>
-                <span className="menu-index">04</span><strong>Map</strong><i>⌖</i>
+                <span className="menu-index">04</span><strong>{ui.map}</strong><i>⌖</i>
               </button>
               <button className="menu-action" onClick={() => setTerminologyOpen(true)}>
-                <span className="menu-index">05</span><strong>Terminology</strong><i>≡</i>
+                <span className="menu-index">05</span><strong>{ui.terminology}</strong><i>≡</i>
               </button>
             </nav>
           </div>
 
-          <footer className="menu-footer">
-            <span>Best experienced with sound off and attention on.</span>
-            <span>Scroll not required</span>
-          </footer>
+          <footer className="menu-footer"><span>{currentLocale.nativeName}</span><span>{ui.perspectives}</span></footer>
         </section>
       )}
 
       {screen === "intro" && (
         <section className={`story-screen story-${slides[slideIndex].id}`} aria-live="polite">
           <header className="story-header">
-            <button className="text-button" onClick={returnToMenu}>← Menu</button>
+            <button className="text-button" onClick={returnToMenu}>← {ui.menu}</button>
             <Brand compact />
-            <button className="text-button" onClick={() => setScreen("choose")}>Skip intro</button>
+            <button className="text-button" onClick={() => setScreen("choose")}>{ui.skipIntro}</button>
           </header>
 
           <div className="story-visual" key={`visual-${slideIndex}`} aria-hidden="true">
@@ -359,7 +388,7 @@ export default function Home() {
 
           <button
             className="story-tap-layer"
-            aria-label={slideIndex === slides.length - 1 ? "Continue to character selection" : "Continue to next story slide"}
+            aria-label={slideIndex === slides.length - 1 ? ui.tapChoose : ui.tapNext}
             onPointerDown={(event) => { pointerStart.current = event.clientX; }}
             onPointerUp={handleStoryPointerUp}
             onKeyDown={(event) => {
@@ -369,7 +398,7 @@ export default function Home() {
           />
           <div className="story-gesture-hint" aria-hidden="true">
             <span>{String(slideIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
-            <strong>{slideIndex === slides.length - 1 ? "Tap to choose your character" : "Tap or swipe to continue"}</strong>
+            <strong>{slideIndex === slides.length - 1 ? ui.tapChoose : ui.tapNext}</strong>
             <i>→</i>
           </div>
           {floodTone && <div className={`story-flood ${floodTone}`} aria-hidden="true"><span /><span /><span /></div>}
@@ -379,35 +408,35 @@ export default function Home() {
       {screen === "choose" && (
         <section className="choose-screen screen-enter">
           <header className="story-header">
-            <button className="text-button" onClick={() => setScreen("intro")}>← Prologue</button>
+            <button className="text-button" onClick={() => setScreen("intro")}>← {ui.prologue}</button>
             <Brand compact />
-            <span className="step-count">Step 02 / 02</span>
+            <span className="step-count">02 / 02</span>
           </header>
 
           <div className="choose-heading">
-            <span>Your perspective</span>
-            <h2>Choose your character</h2>
-            <p>You will see the same world through a different set of pressures, incentives, and expectations.</p>
+            <span>{ui.choosePerspective}</span>
+            <h2>{ui.chooseCharacter}</h2>
+            <p>{ui.chooseDescription}</p>
           </div>
 
           <div className="character-select" role="radiogroup" aria-label="Choose a character">
             <button className={`select-card male ${gender === "male" ? "selected" : ""}`} onClick={() => chooseGender("male")} role="radio" aria-checked={gender === "male"}>
               <span className="card-code">M · 01</span>
               <Character gender="male" large />
-              <span className="card-copy"><small>Play as</small><strong>Male</strong><i>the male experience</i></span>
+              <span className="card-copy"><small>{ui.playAs}</small><strong>{ui.male}</strong><i>{ui.maleExperience}</i></span>
               <span className="select-mark">{gender === "male" ? "✓" : "+"}</span>
             </button>
-            <div className="versus"><span />or<span /></div>
+            <div className="versus"><span />{ui.or}<span /></div>
             <button className={`select-card female ${gender === "female" ? "selected" : ""}`} onClick={() => chooseGender("female")} role="radio" aria-checked={gender === "female"}>
               <span className="card-code">F · 02</span>
               <Character gender="female" large />
-              <span className="card-copy"><small>Play as</small><strong>Female</strong><i>the female experience</i></span>
+              <span className="card-copy"><small>{ui.playAs}</small><strong>{ui.female}</strong><i>{ui.femaleExperience}</i></span>
               <span className="select-mark">{gender === "female" ? "✓" : "+"}</span>
             </button>
           </div>
 
           <button className="begin-button" disabled={!gender} onClick={() => gender && setScreen("experience")}>
-            <span>{gender ? `Enter the ${gender} experience` : "Select a character"}</span><i>→</i>
+            <span>{gender ? ui.enterExperience.replace("{gender}", gender === "male" ? ui.maleExperience : ui.femaleExperience) : ui.selectCharacter}</span><i>→</i>
           </button>
         </section>
       )}
@@ -415,16 +444,16 @@ export default function Home() {
       {screen === "experience" && gender && (
         <section className={`experience-screen chapter-hub ${gender} screen-enter`}>
           <header className="story-header">
-            <button className="text-button" onClick={() => setScreen("choose")}>← Character select</button>
+            <button className="text-button" onClick={() => setScreen("choose")}>← {ui.characterSelect}</button>
             <Brand compact />
-            <button className="text-button" onClick={returnToMenu}>Main menu</button>
+            <button className="text-button" onClick={returnToMenu}>{ui.mainMenu}</button>
           </header>
           <div className="experience-orbit" aria-hidden="true"><span /><span /><span /></div>
           <div className="experience-character"><Character gender={gender} large /></div>
           <div className="experience-copy experience-hub">
-            <span>Your three lenses</span>
-            <h2>The <em>{gender}</em><br />experience</h2>
-            <p>Explore the same three forces from this perspective. Each chapter will grow as new findings and evidence are added.</p>
+            <span>{ui.threeLenses}</span>
+            <h2><em>{gender === "male" ? ui.male : ui.female}</em><br />{ui.experience}</h2>
+            <p>{ui.experienceIntro}</p>
             <div className="chapter-grid">
               {experienceSections.map((section) => {
                 const Icon = sectionIcons[section.id];
@@ -445,9 +474,9 @@ export default function Home() {
       {activeSection && gender && (
         <section className={`chapter-screen ${gender} screen-enter`}>
           <header className="story-header">
-            <button className="text-button" onClick={() => setScreen("experience")}>← Experience</button>
+            <button className="text-button" onClick={() => setScreen("experience")}>← {ui.experience}</button>
             <Brand compact />
-            <button className="text-button" onClick={returnToMenu}>Main menu</button>
+            <button className="text-button" onClick={returnToMenu}>{ui.mainMenu}</button>
           </header>
           <div className="chapter-number" aria-hidden="true">{activeSection.number}</div>
           <article className="chapter-content">
@@ -455,58 +484,70 @@ export default function Home() {
             <h2>{activeSection.title}</h2>
             <p className="chapter-description">{activeSection.description}</p>
             <blockquote>{activeSection.prompt[gender]}</blockquote>
-            {activeSection.id === "politics" && <VotingCharts />}
-            <div className="chapter-lenses" aria-label="Topics in this chapter">
+            {activeSection.id === "politics" && <VotingCharts locale={locale} ui={ui} />}
+            <div className="chapter-lenses" aria-label={ui.topics}>
               {activeSection.lenses.map((lens, index) => <span key={lens}><b>{String(index + 1).padStart(2, "0")}</b>{lens}</span>)}
             </div>
             <footer>
-              <span>Framework ready</span>
-              <p>Interactive scenarios and evidence will live inside this chapter.</p>
+              <span>{ui.frameworkReady}</span>
+              <p>{ui.frameworkNote}</p>
               {experienceSections.findIndex((section) => section.id === activeSection.id) < experienceSections.length - 1 ? (
-                <button onClick={() => enterSection(experienceSections[experienceSections.findIndex((section) => section.id === activeSection.id) + 1].id)}>Next chapter <i>→</i></button>
+                <button onClick={() => enterSection(experienceSections[experienceSections.findIndex((section) => section.id === activeSection.id) + 1].id)}>{ui.nextChapter} <i>→</i></button>
               ) : (
-                <button onClick={() => setScreen("experience")}>All chapters <i>↺</i></button>
+                <button onClick={() => setScreen("experience")}>{ui.allChapters} <i>↺</i></button>
               )}
             </footer>
           </article>
         </section>
       )}
 
-      {(settingsOpen || recapOpen || mapOpen || terminologyOpen) && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget !== event.target) return; setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }}>
-          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }} aria-label="Close">×</button>
-            {terminologyOpen ? (
+      {(settingsOpen || recapOpen || mapOpen || terminologyOpen || languageOpen) && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget !== event.target) return; setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); }}>
+          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""} ${languageOpen ? "language-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); setLanguageOpen(false); }} aria-label={ui.close}>×</button>
+            {languageOpen ? (
               <>
-                <span className="modal-kicker">Language of the debate</span><h2 id="modal-title">Terminology</h2>
-                <p className="terms-intro">These labels change across communities. The glossary describes common usage without endorsing the worldview behind it.</p>
+                <span className="modal-kicker">{ui.system}</span><h2 id="modal-title">{ui.language}</h2>
+                <div className="language-grid">
+                  {localeOptions.map((option) => (
+                    <button key={option.id} className={locale === option.id ? "selected" : ""} lang={option.id} onClick={() => setLocale(option.id)}>
+                      <span>{option.short}</span><strong>{option.nativeName}</strong><i>{locale === option.id ? "✓" : ""}</i>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : terminologyOpen ? (
+              <>
+                <span className="modal-kicker">{ui.debateLanguage}</span><h2 id="modal-title">{ui.terminology}</h2>
+                <p className="terms-intro">{ui.termsIntro}</p>
                 <div className="terms-list">
                   {terminology.map((term) => (
                     <article className={`term-card ${term.id}`} key={term.id}>
-                      <span className="term-dot" /><div><h3>{term.name}</h3><p>{term.shortDefinition}</p><small>{term.context}</small><a href={term.sources[0].url} target="_blank" rel="noreferrer">Source: {term.sources[0].label} ↗</a></div>
+                      <span className="term-dot" /><div><h3>{term.name}</h3><p>{term.shortDefinition}</p><small>{term.context}</small><a href={term.sources[0].url} target="_blank" rel="noreferrer">{ui.source}: {term.sources[0].label} ↗</a></div>
                     </article>
                   ))}
                 </div>
               </>
             ) : mapOpen ? (
               <>
-                <span className="modal-kicker">Your journey</span><h2 id="modal-title">Map</h2>
+                <span className="modal-kicker">{ui.journey}</span><h2 id="modal-title">{ui.map}</h2>
                 <div className="dual-map">
-                  <JourneyMap side="female" screen={screen} selectedGender={gender} visitedSections={visitedSections} onNavigate={navigateFromMap} />
-                  <JourneyMap side="male" screen={screen} selectedGender={gender} visitedSections={visitedSections} onNavigate={navigateFromMap} />
+                  <JourneyMap side="female" screen={screen} selectedGender={gender} visitedSections={visitedSections} sections={experienceSections} ui={ui} onNavigate={navigateFromMap} />
+                  <JourneyMap side="male" screen={screen} selectedGender={gender} visitedSections={visitedSections} sections={experienceSections} ui={ui} onNavigate={navigateFromMap} />
                 </div>
               </>
             ) : settingsOpen ? (
               <>
-                <span className="modal-kicker">System</span><h2 id="modal-title">Settings</h2>
-                <label className="setting-row" htmlFor="auto-advance"><span><strong>Auto-advance</strong><small>Move through prologue slides every 3.5 seconds</small></span><input id="auto-advance" aria-label="Auto-advance" type="checkbox" checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} /></label>
-                <label className="setting-row" htmlFor="reduce-motion"><span><strong>Reduce motion</strong><small>Minimize scene and interface animation</small></span><input id="reduce-motion" aria-label="Reduce motion" type="checkbox" checked={reducedMotion} onChange={(event) => setReducedMotion(event.target.checked)} /></label>
+                <span className="modal-kicker">{ui.system}</span><h2 id="modal-title">{ui.settings}</h2>
+                <label className="setting-row" htmlFor="app-language"><span><strong>{ui.language}</strong><small>{ui.languageDetail}</small></span><select id="app-language" value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>{localeOptions.map((option) => <option key={option.id} value={option.id}>{option.nativeName}</option>)}</select></label>
+                <label className="setting-row" htmlFor="auto-advance"><span><strong>{ui.autoAdvance}</strong><small>{ui.autoAdvanceDetail}</small></span><input id="auto-advance" aria-label={ui.autoAdvance} type="checkbox" checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} /></label>
+                <label className="setting-row" htmlFor="reduce-motion"><span><strong>{ui.reduceMotion}</strong><small>{ui.reduceMotionDetail}</small></span><input id="reduce-motion" aria-label={ui.reduceMotion} type="checkbox" checked={reducedMotion} onChange={(event) => setReducedMotion(event.target.checked)} /></label>
               </>
             ) : (
               <>
-                <span className="modal-kicker">Your journey</span><h2 id="modal-title">Recap</h2>
-                {gender ? <div className={`recap-character ${gender}`}><Character gender={gender} /><span><small>Last path</small><strong>The {gender} experience</strong></span></div> : <p className="empty-recap">No journey recorded yet.<br />Start the prologue and choose a character.</p>}
-                <button className="modal-action" onClick={() => { setRecapOpen(false); if (gender) setScreen("experience"); else startGame(); }}>{gender ? "Resume" : "Begin"}<span>→</span></button>
+                <span className="modal-kicker">{ui.journey}</span><h2 id="modal-title">{ui.recap}</h2>
+                {gender ? <div className={`recap-character ${gender}`}><Character gender={gender} /><span><small>{ui.lastPath}</small><strong>{gender === "male" ? ui.maleExperience : ui.femaleExperience}</strong></span></div> : <p className="empty-recap">{ui.noJourney}</p>}
+                <button className="modal-action" onClick={() => { setRecapOpen(false); if (gender) setScreen("experience"); else startGame(); }}>{gender ? ui.resume : ui.begin}<span>→</span></button>
               </>
             )}
           </section>

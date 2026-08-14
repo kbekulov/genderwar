@@ -16,7 +16,7 @@ export type ExperienceSection = {
 export type IdeologyPoint = { year: number; women: number; men: number };
 
 export type PrologueSlide = {
-  id: "retreat" | "depression" | "fertility" | "crime" | "question";
+  id: "retreat" | "depression" | "birthrate" | "crime" | "question";
   label: string;
   text: string;
   note: string;
@@ -54,7 +54,7 @@ export type GlossaryTerm = {
 export const prologueSlides: PrologueSlide[] = [
   { id: "retreat", label: "01", text: "men are retreating from society", note: "Connection is thinning." },
   { id: "depression", label: "02", text: "women are falling into depression", note: "Wellbeing is under pressure." },
-  { id: "fertility", label: "03", text: "fertility rates are dropping", note: "Fewer families are forming." },
+  { id: "birthrate", label: "03", text: "birth rates are dropping", note: "Fewer families are forming." },
   { id: "crime", label: "04", text: "crime rates are increasing", note: "Social trust is fraying." },
   { id: "question", label: "05", text: "what’s happening?", note: "To understand the conflict, choose a perspective." },
 ];

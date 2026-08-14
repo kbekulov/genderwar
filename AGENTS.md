@@ -12,3 +12,9 @@
 - Translate the realization into a testable insight, perspective, context, mechanic, choices, takeaway, confidence level, and evidence links when available.
 - Clearly distinguish hypotheses, observed patterns, and evidence-backed claims. Do not present group-level tendencies as universal facts about individuals.
 - Preserve the established visual language, mobile ergonomics, accessibility, and continuity between both character paths.
+
+## Localization workflow
+
+- Every new or changed user-facing text must ship with natural, context-aware translations for English, French, German, Russian, Japanese, Korean, and Simplified Chinese.
+- Keep all seven locales structurally equivalent so no language receives a reduced version of the experience.
+- Preserve the user’s language choice across sessions and keep language access available from every game screen as well as Settings.
