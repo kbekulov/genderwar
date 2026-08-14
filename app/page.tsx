@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { IconMan, IconWoman } from "@tabler/icons-react";
 import { prologueSlides as slides, type Gender } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience";
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
+  const Icon = gender === "male" ? IconMan : IconWoman;
   return (
     <span className={`game-character ${gender} ${large ? "large" : ""}`} aria-hidden="true">
       <span className="character-orbit orbit-one" />
       <span className="character-orbit orbit-two" />
-      <span className="character-head" />
-      <span className="character-hair" />
-      <span className="character-body" />
-      <span className="character-face" />
+      <Icon className="character-glyph" stroke={1.35} />
     </span>
   );
 }
