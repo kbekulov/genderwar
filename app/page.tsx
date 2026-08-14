@@ -15,6 +15,7 @@ import {
 import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getTranslation, localeOptions, type Locale } from "@/app/content/i18n";
 import { claimStatusUi, claimsMenu, claimsUi, getClaims } from "@/app/content/claims";
+import { sceneUi, type SceneCopy } from "@/app/content/sceneUi";
 import { ideologySeries, type ExperienceSection, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
@@ -103,21 +104,78 @@ function IdeologyChart({ country, data, locale, ui, compact = false }: { country
   );
 }
 
-function VotingCharts({ locale, ui }: { locale: Locale; ui: AppCopy["ui"] }) {
+function SelectionAnimation({ gender, copy, reducedMotion }: { gender: Gender; copy: SceneCopy; reducedMotion: boolean }) {
+  const [digital, setDigital] = useState(false);
+  const visibleCount = digital ? 84 : 10;
+  const candidateGender: Gender = gender === "female" ? "male" : "female";
+  const toggle = () => setDigital((value) => !value);
+
   return (
-    <section className="voting-data" aria-labelledby="ideology-gap-title">
-      <header className="voting-data-heading">
-        <span>{ui.observedPattern}</span>
-        <h3 id="ideology-gap-title">{ui.ideologyGap}</h3>
-        <p>{ui.ideologySubtitle}</p>
-      </header>
-      <IdeologyChart country="US" data={ideologySeries.US} locale={locale} ui={ui} />
-      <div className="global-chart-grid">
-        {(Object.keys(ideologySeries) as Array<keyof typeof ideologySeries>).map((country) => <IdeologyChart key={country} country={country} data={ideologySeries[country]} locale={locale} ui={ui} compact />)}
+    <div className={`selection-animation ${digital ? "digital" : "nearby"} ${reducedMotion ? "still" : ""}`} role="button" tabIndex={0} aria-label={digital ? copy.contract : copy.expand} onClick={toggle} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") toggle(); }}>
+      <div className="selection-readout">
+        <span>{digital ? copy.online : copy.nearby}</span>
+        <strong>{digital ? "1,000" : "10"}</strong>
+        <small>{copy.pool}</small>
       </div>
-      <footer className="chart-source">
-        <p><strong>{ui.source}:</strong> {ui.chartReading}</p>
-        <p>{ui.chartReconstruction} <a href="https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998" target="_blank" rel="noreferrer">Financial Times ↗</a> · <a href="https://youngamericans.berkeley.edu/2024/02/are-the-ideologies-of-young-women-and-young-men-in-the-us-diverging/" target="_blank" rel="noreferrer">{ui.methodology} ↗</a></p>
+      <div className="candidate-field" aria-hidden="true">
+        {Array.from({ length: visibleCount }).map((_, index) => {
+          const x = digital ? 4 + ((index * 37) % 92) : 8 + index * 9.2;
+          const y = digital ? 8 + ((index * 53) % 64) : 42 + Math.sin(index * 1.7) * 13;
+          const chosen = index === (digital ? 46 : 4);
+          return <span key={`${digital}-${index}`} className={`candidate ${candidateGender} ${chosen ? "chosen" : ""}`} style={{ "--x": `${x}%`, "--y": `${y}%`, "--delay": `${(index % 12) * 28}ms` } as CSSProperties}><i /><b /></span>;
+        })}
+      </div>
+      <div className="choice-beam" aria-hidden="true" />
+      <div className="selection-player"><Character gender={gender} large /><span>{copy.oneChoice}</span></div>
+      <div className="chosen-label" aria-hidden="true"><i />{copy.selected}</div>
+      <div className="scene-tap"><span>{copy.interact}</span><strong>{digital ? copy.contract : copy.expand}</strong><i>↗</i></div>
+    </div>
+  );
+}
+
+function PoliticsAnimation({ locale, ui, copy }: { locale: Locale; ui: AppCopy["ui"]; copy: SceneCopy }) {
+  return (
+    <div className="politics-animation">
+      <div className="scene-statement"><span>{ui.observedPattern}</span><strong>{copy.politicsLead}</strong></div>
+      <IdeologyChart country="US" data={ideologySeries.US} locale={locale} ui={ui} />
+      <div className="politics-pulse" aria-hidden="true"><i className="female" /><i className="male" /></div>
+    </div>
+  );
+}
+
+function ValueAnimation({ gender, copy }: { gender: Gender; copy: SceneCopy }) {
+  const values = gender === "male" ? [18, 22, 28, 39, 55, 72, 84, 88, 81, 72, 62] : [82, 89, 92, 88, 79, 67, 58, 52, 47, 43, 39];
+  return (
+    <div className={`value-animation ${gender}`}>
+      <div className="scene-statement"><span>{copy.watch}</span><strong>{copy.valueLead}</strong></div>
+      <div className="value-stage" aria-hidden="true">
+        <div className="value-grid" />
+        <div className="value-bars">{values.map((value, index) => <i key={index} style={{ "--value": `${value}%`, "--delay": `${index * 80}ms` } as CSSProperties}><b /></i>)}</div>
+        <div className="value-person"><Character gender={gender} large /></div>
+      </div>
+      <div className="age-scale"><span>{copy.age} 18</span><span>30</span><span>45</span><span>60+</span></div>
+    </div>
+  );
+}
+
+function ExperienceAnimation({ section, gender, locale, ui, copy, reducedMotion, onBack, onMenu, onNext, onClaims }: { section: ExperienceSection; gender: Gender; locale: Locale; ui: AppCopy["ui"]; copy: SceneCopy; reducedMotion: boolean; onBack: () => void; onMenu: () => void; onNext: () => void; onClaims: () => void }) {
+  return (
+    <section className={`animated-chapter ${gender} screen-enter`}>
+      <header className="story-header">
+        <button className="text-button" onClick={onBack}>← {ui.experience}</button>
+        <Brand compact />
+        <button className="text-button" onClick={onMenu}>{ui.mainMenu}</button>
+      </header>
+      <div className="animated-chapter-heading"><span>{section.number} · {copy.watch}</span><h2>{section.title}</h2></div>
+      <div className="animation-stage">
+        {section.id === "selection" && <SelectionAnimation gender={gender} copy={copy} reducedMotion={reducedMotion} />}
+        {section.id === "politics" && <PoliticsAnimation locale={locale} ui={ui} copy={copy} />}
+        {section.id === "value" && <ValueAnimation gender={gender} copy={copy} />}
+      </div>
+      <footer className="animation-controls">
+        <button className="notes-control" onClick={onClaims}>{copy.notes}</button>
+        <div className="scene-progress" aria-label={`${section.number} / 03`}><i className={section.id === "selection" ? "active" : ""} /><i className={section.id === "politics" ? "active" : ""} /><i className={section.id === "value" ? "active" : ""} /></div>
+        <button className="next-control" onClick={onNext}>{section.id === "value" ? ui.allChapters : copy.next}<i>→</i></button>
       </footer>
     </section>
   );
@@ -228,6 +286,7 @@ export default function Home() {
   const claimCopy = claimsUi[locale];
   const claimMenu = claimsMenu[locale];
   const claimStatus = claimStatusUi[locale];
+  const sceneCopy = sceneUi[locale];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -312,11 +371,6 @@ export default function Home() {
   function enterSection(section: ExperienceSectionId) {
     setVisitedSections((visited) => visited.includes(section) ? visited : [...visited, section]);
     setScreen(section);
-  }
-
-  function openClaim(id: number) {
-    setSelectedClaimId(id);
-    setClaimsOpen(true);
   }
 
   const activeSection = experienceSections.find((section) => section.id === screen);
@@ -489,41 +543,22 @@ export default function Home() {
       )}
 
       {activeSection && gender && (
-        <section className={`chapter-screen ${gender} screen-enter`}>
-          <header className="story-header">
-            <button className="text-button" onClick={() => setScreen("experience")}>← {ui.experience}</button>
-            <Brand compact />
-            <button className="text-button" onClick={returnToMenu}>{ui.mainMenu}</button>
-          </header>
-          <div className="chapter-number" aria-hidden="true">{activeSection.number}</div>
-          <article className="chapter-content">
-            <span className="chapter-eyebrow">{activeSection.eyebrow}</span>
-            <h2>{activeSection.title}</h2>
-            <p className="chapter-description">{activeSection.description}</p>
-            <blockquote>{activeSection.prompt[gender]}</blockquote>
-            {activeSection.id === "politics" && <VotingCharts locale={locale} ui={ui} />}
-            <section className="chapter-claims" aria-label={claimMenu}>
-              <header><span>{claimCopy.hypothesis}</span><strong>{claimMenu}</strong></header>
-              <div>
-                {claims.filter((claim) => claim.category === activeSection.id).map((claim) => (
-                  <button key={claim.id} onClick={() => openClaim(claim.id)}><b>{String(claim.id).padStart(2, "0")}</b><span>{claim.title}</span><i>→</i></button>
-                ))}
-              </div>
-            </section>
-            <div className="chapter-lenses" aria-label={ui.topics}>
-              {activeSection.lenses.map((lens, index) => <span key={lens}><b>{String(index + 1).padStart(2, "0")}</b>{lens}</span>)}
-            </div>
-            <footer>
-              <span>{ui.frameworkReady}</span>
-              <p>{ui.frameworkNote}</p>
-              {experienceSections.findIndex((section) => section.id === activeSection.id) < experienceSections.length - 1 ? (
-                <button onClick={() => enterSection(experienceSections[experienceSections.findIndex((section) => section.id === activeSection.id) + 1].id)}>{ui.nextChapter} <i>→</i></button>
-              ) : (
-                <button onClick={() => setScreen("experience")}>{ui.allChapters} <i>↺</i></button>
-              )}
-            </footer>
-          </article>
-        </section>
+        <ExperienceAnimation
+          section={activeSection}
+          gender={gender}
+          locale={locale}
+          ui={ui}
+          copy={sceneCopy}
+          reducedMotion={reducedMotion}
+          onBack={() => setScreen("experience")}
+          onMenu={returnToMenu}
+          onClaims={() => { setSelectedClaimId(null); setClaimsOpen(true); }}
+          onNext={() => {
+            const index = experienceSections.findIndex((section) => section.id === activeSection.id);
+            if (index < experienceSections.length - 1) enterSection(experienceSections[index + 1].id);
+            else setScreen("experience");
+          }}
+        />
       )}
 
       {(settingsOpen || recapOpen || mapOpen || terminologyOpen || languageOpen || claimsOpen) && (
