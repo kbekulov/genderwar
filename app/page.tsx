@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { prologueSlides as slides, type Gender } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience";
-type Gender = "male" | "female";
-
-const slides = [
-  { id: "retreat", label: "01", text: "men are retreating from society", note: "Connection is thinning." },
-  { id: "depression", label: "02", text: "women are falling into depression", note: "Wellbeing is under pressure." },
-  { id: "fertility", label: "03", text: "fertility rates are dropping", note: "Fewer families are forming." },
-  { id: "crime", label: "04", text: "crime rates are increasing", note: "Social trust is fraying." },
-  { id: "question", label: "05", text: "what’s happening?", note: "To understand the conflict, choose a perspective." },
-] as const;
-
 function Character({ gender, large = false }: { gender: Gender; large?: boolean }) {
   return (
     <span className={`game-character ${gender} ${large ? "large" : ""}`} aria-hidden="true">
