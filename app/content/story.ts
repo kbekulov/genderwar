@@ -1,6 +1,9 @@
+Exit code: 0
+Wall time: 0.5 seconds
+Output:
 export type Gender = "male" | "female";
 
-export type ExperienceSectionId = "selection" | "politics" | "value";
+export type ExperienceSectionId = "selection" | "politics" | "value" | "risks" | "contributions";
 
 export type ExperienceSection = {
   id: ExperienceSectionId;
@@ -101,6 +104,32 @@ export const experienceSections: ExperienceSection[] = [
       female: "How do age, health, competence, relationships, resources, and social standing change perceived value over time?",
     },
   },
+  {
+    id: "risks",
+    number: "04",
+    mapLabel: "Risks",
+    eyebrow: "Relationships · politics · exposure",
+    title: "Life risks",
+    description: "How relationship dynamics and political systems expose men and women to different combinations of physical, emotional, financial, reproductive, and civic risk.",
+    lenses: ["Relationships", "Politics", "Trade-offs"],
+    prompt: {
+      male: "Which risks are more visible to men, and which risks do institutions or relationships ask them to absorb?",
+      female: "Which risks are more visible to women, and which risks do institutions or relationships ask them to absorb?",
+    },
+  },
+  {
+    id: "contributions",
+    number: "05",
+    mapLabel: "Contributions",
+    eyebrow: "Work · protection · continuity",
+    title: "Contributions",
+    description: "How essential systems are sustained through different forms of labour, protection, care, reproduction, and long-term responsibility.",
+    lenses: ["Public systems", "Protection", "Continuity"],
+    prompt: {
+      male: "How do male-dominated roles in policing, infrastructure, emergency response, defence, and hazardous work sustain society?",
+      female: "How do childbirth, maternal investment, care, and women’s work across public systems sustain society?",
+    },
+  },
 ];
 
 // Approximate values digitized from the published FT graphic supplied as the
@@ -157,3 +186,4 @@ export const terminology: GlossaryTerm[] = [
     sources: [{ label: "ADL incel backgrounder", url: "https://www.adl.org/resources/backgrounder/incels-involuntary-celibates" }],
   },
 ];
+

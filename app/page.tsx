@@ -1,7 +1,10 @@
+Exit code: 0
+Wall time: 0.5 seconds
+Output:
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { IconBuildingBank, IconHeartHandshake, IconLanguage, IconMan, IconMap2, IconTrendingUp, IconWoman } from "@tabler/icons-react";
+import { IconAlertTriangle, IconBuildingBank, IconHeartHandshake, IconLanguage, IconMan, IconMap2, IconTrendingUp, IconUsersGroup, IconWoman } from "@tabler/icons-react";
 import {
   Background,
   BackgroundVariant,
@@ -47,6 +50,8 @@ const sectionIcons = {
   selection: IconHeartHandshake,
   politics: IconBuildingBank,
   value: IconTrendingUp,
+  risks: IconAlertTriangle,
+  contributions: IconUsersGroup,
 };
 
 type JourneyNodeData = {
@@ -158,6 +163,46 @@ function ValueAnimation({ gender, copy }: { gender: Gender; copy: SceneCopy }) {
   );
 }
 
+function RisksAnimation({ gender, copy }: { gender: Gender; copy: SceneCopy }) {
+  const [domain, setDomain] = useState<"relationship" | "politics">("relationship");
+  const items = copy.riskItems[domain][gender];
+  return (
+    <div className={`risks-animation ${gender}`}>
+      <div className="scene-statement"><span>{copy.watch}</span><strong>{copy.riskLead}</strong></div>
+      <div className="risk-switch" role="group" aria-label={copy.riskLead}>
+        <button className={domain === "relationship" ? "active" : ""} onClick={() => setDomain("relationship")}>{copy.relationships}</button>
+        <button className={domain === "politics" ? "active" : ""} onClick={() => setDomain("politics")}>{copy.civic}</button>
+      </div>
+      <div className="risk-field" key={`${gender}-${domain}`}>
+        <div className="risk-orbit" aria-hidden="true"><i /><i /><i /></div>
+        <div className="risk-character"><Character gender={gender} large /><span>{copy.exposedTo}</span></div>
+        {items.map((item, index) => <span className={`risk-token risk-${index + 1}`} key={item} style={{ "--delay": `${index * 130}ms` } as CSSProperties}><i>{String(index + 1).padStart(2, "0")}</i><strong>{item}</strong></span>)}
+      </div>
+      <div className="scene-sources"><a href="https://www.who.int/news-room/fact-sheets/detail/violence-against-women" target="_blank" rel="noreferrer">WHO ↗</a><a href="https://www.ilo.org/resource/news/nearly-3-million-people-die-work-related-accidents-and-diseases" target="_blank" rel="noreferrer">ILO ↗</a></div>
+    </div>
+  );
+}
+
+function ContributionsAnimation({ gender, copy }: { gender: Gender; copy: SceneCopy }) {
+  return (
+    <div className={`contributions-animation ${gender}`}>
+      <div className="scene-statement"><span>{copy.watch}</span><strong>{copy.contributionLead}</strong></div>
+      <div className="contribution-system">
+        {(["male", "female"] as Gender[]).map((side) => (
+          <section className={`contribution-lane ${side} ${gender === side ? "selected" : ""}`} key={side}>
+            <Character gender={side} />
+            <div>{copy.contributionItems[side].map((item, index) => <span key={item} style={{ "--delay": `${index * 120}ms` } as CSSProperties}><i>{String(index + 1).padStart(2, "0")}</i><strong>{item}</strong></span>)}</div>
+          </section>
+        ))}
+        <div className="system-core" aria-label={copy.sharedSystem}><i /><strong>{copy.sharedSystem}</strong><span /><span /><span /></div>
+        <div className="system-link male" aria-hidden="true"><i /><i /><i /></div>
+        <div className="system-link female" aria-hidden="true"><i /><i /><i /></div>
+      </div>
+      <div className="scene-sources"><a href="https://www.bls.gov/opub/reports/womens-databook/" target="_blank" rel="noreferrer">BLS ↗</a><a href="https://www.who.int/news-room/fact-sheets/detail/maternal-mortality" target="_blank" rel="noreferrer">WHO ↗</a></div>
+    </div>
+  );
+}
+
 function ExperienceAnimation({ section, gender, locale, ui, copy, reducedMotion, onBack, onMenu, onNext, onClaims }: { section: ExperienceSection; gender: Gender; locale: Locale; ui: AppCopy["ui"]; copy: SceneCopy; reducedMotion: boolean; onBack: () => void; onMenu: () => void; onNext: () => void; onClaims: () => void }) {
   return (
     <section className={`animated-chapter ${gender} screen-enter`}>
@@ -171,11 +216,13 @@ function ExperienceAnimation({ section, gender, locale, ui, copy, reducedMotion,
         {section.id === "selection" && <SelectionAnimation gender={gender} copy={copy} reducedMotion={reducedMotion} />}
         {section.id === "politics" && <PoliticsAnimation locale={locale} ui={ui} copy={copy} />}
         {section.id === "value" && <ValueAnimation gender={gender} copy={copy} />}
+        {section.id === "risks" && <RisksAnimation gender={gender} copy={copy} />}
+        {section.id === "contributions" && <ContributionsAnimation gender={gender} copy={copy} />}
       </div>
       <footer className="animation-controls">
         <button className="notes-control" onClick={onClaims}>{copy.notes}</button>
-        <div className="scene-progress" aria-label={`${section.number} / 03`}><i className={section.id === "selection" ? "active" : ""} /><i className={section.id === "politics" ? "active" : ""} /><i className={section.id === "value" ? "active" : ""} /></div>
-        <button className="next-control" onClick={onNext}>{section.id === "value" ? ui.allChapters : copy.next}<i>→</i></button>
+        <div className="scene-progress" aria-label={`${section.number} / 05`}><i className={section.id === "selection" ? "active" : ""} /><i className={section.id === "politics" ? "active" : ""} /><i className={section.id === "value" ? "active" : ""} /><i className={section.id === "risks" ? "active" : ""} /><i className={section.id === "contributions" ? "active" : ""} /></div>
+        <button className="next-control" onClick={onNext}>{section.id === "contributions" ? ui.allChapters : copy.next}<i>→</i></button>
       </footer>
     </section>
   );
@@ -186,7 +233,7 @@ function JourneyMap({ side, screen, selectedGender, visitedSections, sections, u
     { screen: "menu", label: ui.origin, detail: ui.originDetail },
     { screen: "intro", label: ui.signals, detail: ui.signalsDetail },
     { screen: "choose", label: ui.perspective, detail: ui.perspectiveDetail },
-    { screen: "experience", label: ui.experience, detail: ui.experienceDetail },
+    { screen: "experience", label: ui.experience, detail: `${sections.length} · ${ui.experience}` },
     ...sections.map((section) => ({ screen: section.id, label: section.mapLabel, detail: section.eyebrow })),
   ];
   const progress = mapStages.findIndex((stage) => stage.screen === screen);
@@ -357,7 +404,7 @@ export default function Home() {
 
   function navigateFromMap(nextScreen: Screen) {
     setMapOpen(false);
-    if (nextScreen === "selection" || nextScreen === "politics" || nextScreen === "value") {
+    if (["selection", "politics", "value", "risks", "contributions"].includes(nextScreen)) {
       setVisitedSections((visited) => visited.includes(nextScreen) ? visited : [...visited, nextScreen]);
     }
     setScreen(nextScreen);
@@ -522,9 +569,8 @@ export default function Home() {
           <div className="experience-orbit" aria-hidden="true"><span /><span /><span /></div>
           <div className="experience-character"><Character gender={gender} large /></div>
           <div className="experience-copy experience-hub">
-            <span>{ui.threeLenses}</span>
+            <span>{String(experienceSections.length).padStart(2, "0")} · {ui.experience}</span>
             <h2><em>{gender === "male" ? ui.male : ui.female}</em><br />{ui.experience}</h2>
-            <p>{ui.experienceIntro}</p>
             <div className="chapter-grid">
               {experienceSections.map((section) => {
                 const Icon = sectionIcons[section.id];
@@ -634,3 +680,4 @@ export default function Home() {
     </main>
   );
 }
+
