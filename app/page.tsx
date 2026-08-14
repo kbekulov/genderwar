@@ -2,6 +2,16 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { IconMan, IconMap2, IconWoman } from "@tabler/icons-react";
+import {
+  Background,
+  BackgroundVariant,
+  Handle,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
 import { prologueSlides as slides, terminology, type Gender } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience";
@@ -33,26 +43,99 @@ const mapStages: Array<{ screen: Screen; label: string; detail: string }> = [
   { screen: "experience", label: "Experience", detail: "Enter the first chapter" },
 ];
 
+type JourneyNodeData = {
+  stage: (typeof mapStages)[number];
+  index: number;
+  locked: boolean;
+  current: boolean;
+  done: boolean;
+  mismatch: boolean;
+  onNavigate: (screen: Screen) => void;
+};
+
+type JourneyNode = Node<JourneyNodeData, "journey">;
+
+function JourneyStageNode({ data }: NodeProps<JourneyNode>) {
+  return (
+    <div className={`path-stage ${data.current ? "current" : ""} ${data.done ? "done" : ""} ${data.locked ? "locked" : ""}`}>
+      <Handle type="target" position={Position.Bottom} />
+      <button disabled={data.locked} onClick={() => data.onNavigate(data.stage.screen)}>
+        <span className="path-checkpoint">{data.done ? "✓" : data.index + 1}</span>
+        <span className="path-label">
+          <strong>{data.stage.label}</strong>
+          <small>{data.mismatch ? "Other path" : data.current ? "You are here" : data.stage.detail}</small>
+        </span>
+      </button>
+      <Handle type="source" position={Position.Top} />
+    </div>
+  );
+}
+
+const journeyNodeTypes = { journey: JourneyStageNode };
+
 function JourneyMap({ side, screen, selectedGender, onNavigate }: { side: Gender; screen: Screen; selectedGender: Gender | null; onNavigate: (screen: Screen) => void }) {
   const progress = mapStages.findIndex((stage) => stage.screen === screen);
+  const mirrored = side === "male";
+  const nodes: JourneyNode[] = mapStages.map((stage, index) => {
+    const pathMismatch = stage.screen === "experience" && selectedGender !== null && selectedGender !== side;
+    const locked = index > progress || pathMismatch;
+    const current = stage.screen === screen && !pathMismatch;
+    const goesRight = (index % 2 === 0) !== mirrored;
+    return {
+      id: `${side}-${stage.screen}`,
+      type: "journey",
+      position: { x: goesRight ? 92 : 0, y: 348 - index * 112 },
+      data: {
+        stage,
+        index,
+        locked,
+        current,
+        done: index < progress && !pathMismatch,
+        mismatch: pathMismatch,
+        onNavigate,
+      },
+      draggable: false,
+      selectable: !locked,
+    };
+  });
+  const edges: Edge[] = mapStages.slice(0, -1).map((stage, index) => {
+    const next = mapStages[index + 1];
+    const reached = index < progress;
+    return {
+      id: `${side}-${stage.screen}-${next.screen}`,
+      source: `${side}-${stage.screen}`,
+      target: `${side}-${next.screen}`,
+      type: "bezier",
+      animated: reached && index === progress - 1,
+      className: reached ? "path-edge reached" : "path-edge",
+    };
+  });
+
   return (
     <section className={`journey-map ${side}`} aria-label={`${side} journey map`}>
       <header><Character gender={side} /><span><small>{side} map</small><strong>The {side} path</strong></span></header>
-      <ol>
-        {mapStages.map((stage, index) => {
-          const pathMismatch = stage.screen === "experience" && selectedGender !== side;
-          const locked = index > progress || pathMismatch;
-          const current = stage.screen === screen && (!pathMismatch || screen !== "experience");
-          return (
-            <li key={stage.screen} className={`${current ? "current" : ""} ${index < progress && !pathMismatch ? "done" : ""} ${locked ? "locked" : ""}`}>
-              <button disabled={locked} onClick={() => onNavigate(stage.screen)}>
-                <span className="map-node">{index < progress && !pathMismatch ? "✓" : index + 1}</span>
-                <span className="map-stage-copy"><strong>{stage.label}</strong><small>{locked && pathMismatch ? `Choose ${side} to unlock` : stage.detail}</small></span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="journey-canvas">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={journeyNodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.08, maxZoom: 1 }}
+          minZoom={0.72}
+          maxZoom={1.18}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          panOnDrag
+          zoomOnScroll={false}
+          zoomOnDoubleClick={false}
+          zoomOnPinch
+          preventScrolling
+        >
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
+        </ReactFlow>
+      </div>
+      <p className="map-touch-hint">Drag to explore · pinch to zoom · tap a level</p>
     </section>
   );
 }
@@ -278,8 +361,8 @@ export default function Home() {
       )}
 
       {(settingsOpen || recapOpen || mapOpen || terminologyOpen) && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }}>
-          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget !== event.target) return; setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }}>
+          <section className={`game-modal ${mapOpen ? "map-modal" : ""} ${terminologyOpen ? "terms-modal" : ""}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <button className="modal-close" onClick={() => { setSettingsOpen(false); setRecapOpen(false); setMapOpen(false); setTerminologyOpen(false); }} aria-label="Close">×</button>
             {terminologyOpen ? (
               <>
@@ -304,14 +387,14 @@ export default function Home() {
             ) : settingsOpen ? (
               <>
                 <span className="modal-kicker">System</span><h2 id="modal-title">Settings</h2>
-                <label className="setting-row"><span><strong>Auto-advance</strong><small>Move through prologue slides every 3.5 seconds</small></span><input type="checkbox" checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} /></label>
-                <label className="setting-row"><span><strong>Reduce motion</strong><small>Minimize scene and interface animation</small></span><input type="checkbox" checked={reducedMotion} onChange={(event) => setReducedMotion(event.target.checked)} /></label>
+                <label className="setting-row" htmlFor="auto-advance"><span><strong>Auto-advance</strong><small>Move through prologue slides every 3.5 seconds</small></span><input id="auto-advance" aria-label="Auto-advance" type="checkbox" checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} /></label>
+                <label className="setting-row" htmlFor="reduce-motion"><span><strong>Reduce motion</strong><small>Minimize scene and interface animation</small></span><input id="reduce-motion" aria-label="Reduce motion" type="checkbox" checked={reducedMotion} onChange={(event) => setReducedMotion(event.target.checked)} /></label>
               </>
             ) : (
               <>
                 <span className="modal-kicker">Your journey</span><h2 id="modal-title">Recap</h2>
                 {gender ? <div className={`recap-character ${gender}`}><Character gender={gender} /><span><small>Last path</small><strong>The {gender} experience</strong></span></div> : <p className="empty-recap">No journey recorded yet.<br />Start the prologue and choose a character.</p>}
-                <button className="modal-action" onClick={() => { setRecapOpen(false); gender ? setScreen("experience") : startGame(); }}>{gender ? "Resume" : "Begin"}<span>→</span></button>
+                <button className="modal-action" onClick={() => { setRecapOpen(false); if (gender) setScreen("experience"); else startGame(); }}>{gender ? "Resume" : "Begin"}<span>→</span></button>
               </>
             )}
           </section>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Nunito } from "next/font/google";
+import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
 const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"] });
