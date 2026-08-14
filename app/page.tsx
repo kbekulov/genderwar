@@ -14,7 +14,7 @@ import {
 } from "@xyflow/react";
 import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getTranslation, localeOptions, type Locale } from "@/app/content/i18n";
-import { claimsUi, getClaims } from "@/app/content/claims";
+import { claimStatusUi, claimsMenu, claimsUi, getClaims } from "@/app/content/claims";
 import { ideologySeries, type ExperienceSection, type ExperienceSectionId, type Gender, type IdeologyPoint } from "@/app/content/story";
 
 type Screen = "menu" | "intro" | "choose" | "experience" | ExperienceSectionId;
@@ -226,6 +226,8 @@ export default function Home() {
   const { ui, slides, sections: experienceSections, terms: terminology } = copy;
   const claims = getClaims(locale);
   const claimCopy = claimsUi[locale];
+  const claimMenu = claimsMenu[locale];
+  const claimStatus = claimStatusUi[locale];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -369,7 +371,7 @@ export default function Home() {
                 <span className="menu-index">05</span><strong>{ui.terminology}</strong><i>≡</i>
               </button>
               <button className="menu-action" onClick={() => { setSelectedClaimId(null); setClaimsOpen(true); }}>
-                <span className="menu-index">06</span><strong>{claimCopy.menu}</strong><i>◇</i>
+                <span className="menu-index">06</span><strong>{claimMenu}</strong><i>◇</i>
               </button>
             </nav>
           </div>
@@ -500,8 +502,8 @@ export default function Home() {
             <p className="chapter-description">{activeSection.description}</p>
             <blockquote>{activeSection.prompt[gender]}</blockquote>
             {activeSection.id === "politics" && <VotingCharts locale={locale} ui={ui} />}
-            <section className="chapter-claims" aria-label={claimCopy.menu}>
-              <header><span>{claimCopy.hypothesis}</span><strong>{claimCopy.menu}</strong></header>
+            <section className="chapter-claims" aria-label={claimMenu}>
+              <header><span>{claimCopy.hypothesis}</span><strong>{claimMenu}</strong></header>
               <div>
                 {claims.filter((claim) => claim.category === activeSection.id).map((claim) => (
                   <button key={claim.id} onClick={() => openClaim(claim.id)}><b>{String(claim.id).padStart(2, "0")}</b><span>{claim.title}</span><i>→</i></button>
@@ -536,7 +538,8 @@ export default function Home() {
                     <button className="claim-back" onClick={() => setSelectedClaimId(null)}>← {claimCopy.back}</button>
                     <header><span>{String(selectedClaim.id).padStart(2, "0")}</span><div><small>{claimCopy.related[selectedClaim.category]}</small><h3>{selectedClaim.title}</h3></div></header>
                     <p>{selectedClaim.proposition}</p>
-                    <div className="claim-caution"><span>{claimCopy.hypothesis}</span><strong>{claimCopy.caution[selectedClaim.caution]}</strong><i>{claimCopy.evidence}</i></div>
+                    <div className="claim-caution"><span>{claimStatus[selectedClaim.status]}</span><strong>{claimCopy.caution[selectedClaim.caution]}</strong><i>{selectedClaim.sources?.length ? `${selectedClaim.sources.length} ${ui.source}` : claimCopy.evidence}</i></div>
+                    {selectedClaim.sources?.length ? <div className="claim-evidence">{selectedClaim.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><span>{ui.source}</span><strong>{source.label}</strong><i>↗</i></a>)}</div> : null}
                     <div className="claim-questions"><p><b>?</b>{claimCopy.assumptions}</p><p><b>↯</b>{claimCopy.counterexample}</p></div>
                   </article>
                 ) : (
